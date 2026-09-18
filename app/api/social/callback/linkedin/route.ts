@@ -1,0 +1,91 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { encrypt } from "@/lib/encryption";
+
+export async function GET(request: Request) {
+  const session = await auth();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  if (!session?.user?.id) {
+    return NextResponse.redirect(new URL("/login", appUrl));
+  }
+
+  const { searchParams } = new URL(request.url);
+  const code = searchParams.get("code");
+  const state = searchParams.get("state");
+  const cookieState = request.headers
+    .get("cookie")
+    ?.split("; ")
+    .find((c) => c.startsWith("linkedin_oauth_state="))
+    ?.split("=")[1];
+
+  if (!code || !state || state !== cookieState) {
+    return NextResponse.redirect(new URL("/accounts?error=linkedin_oauth_state", appUrl));
+  }
+
+  try {
+    const redirectUri = `${appUrl}/api/social/callback/linkedin`;
+    const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+        client_id: process.env.LINKEDIN_CLIENT_ID ?? "",
+        client_secret: process.env.LINKEDIN_CLIENT_SECRET ?? "",
+      }),
+    });
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok) throw new Error(tokenData?.error_description || "Token exchange failed");
+
+    const accessToken = tokenData.access_token as string;
+    const expiresAt = new Date(Date.now() + tokenData.expires_in * 1000);
+
+    const orgsRes = await fetch(
+      "https://api.linkedin.com/v2/organizationAcls?q=roleAssignee&role=ADMINISTRATOR&projection=(elements*(organization~(id,localizedName,logoV2)))",
+      { headers: { Authorization: `Bearer ${accessToken}` } }
+    );
+    const orgsData = await orgsRes.json();
+    if (!orgsRes.ok) throw new Error(orgsData?.message || "Fetching organizations failed");
+
+    const elements = orgsData.elements ?? [];
+    for (const el of elements) {
+      const org = el["organization~"];
+      if (!org) continue;
+      const orgId = String(org.id);
+      await prisma.socialAccount.upsert({
+        where: {
+          userId_platform_accountId: {
+            userId: session.user.id,
+            platform: "LINKEDIN",
+            accountId: orgId,
+          },
+        },
+        update: {
+          accessToken: encrypt(accessToken),
+          accountName: org.localizedName,
+          expiresAt,
+          isActive: true,
+        },
+        create: {
+          userId: session.user.id,
+          platform: "LINKEDIN",
+          accountId: orgId,
+          accountName: org.localizedName,
+          accessToken: encrypt(accessToken),
+          expiresAt,
+        },
+      });
+    }
+
+    const response = NextResponse.redirect(new URL("/accounts?connected=linkedin", appUrl));
+    response.cookies.delete("linkedin_oauth_state");
+    return response;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown_error";
+    return NextResponse.redirect(
+      new URL(`/accounts?error=${encodeURIComponent(message)}`, appUrl)
+    );
+  }
+}

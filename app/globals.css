@@ -1,0 +1,47 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap');
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 42% 6%;
+    --foreground: 216 60% 94%;
+    --card: 218 36% 10%;
+    --card-foreground: 216 60% 94%;
+    --popover: 218 36% 10%;
+    --popover-foreground: 216 60% 94%;
+    --primary: 226 100% 65%;
+    --primary-foreground: 220 42% 6%;
+    --secondary: 217 32% 17%;
+    --secondary-foreground: 216 60% 94%;
+    --muted: 217 32% 17%;
+    --muted-foreground: 216 20% 65%;
+    --accent: 217 32% 17%;
+    --accent-foreground: 216 60% 94%;
+    --destructive: 351 89% 71%;
+    --destructive-foreground: 220 42% 6%;
+    --border: 218 24% 22%;
+    --input: 218 24% 22%;
+    --ring: 226 100% 65%;
+    --radius: 0.75rem;
+  }
+}
+
+* { box-sizing: border-box; }
+html { background: hsl(var(--background)); }
+body {
+  margin: 0;
+  background: radial-gradient(circle at 78% -10%, rgba(76,125,255,.16), transparent 35%), hsl(var(--background));
+  color: hsl(var(--foreground));
+  font-family: 'Manrope', sans-serif;
+}
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+::selection { background: rgba(76,125,255,.35); }
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .font-mono-ui { font-family: 'DM Mono', monospace; }
+  .glass { background: rgba(16,26,43,.72); border: 1px solid rgba(104,128,170,.2); box-shadow: 0 20px 60px rgba(0,0,0,.18); backdrop-filter: blur(18px); }
+}

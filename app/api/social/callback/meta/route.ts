@@ -1,0 +1,95 @@
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
+import { encrypt } from "@/lib/encryption";
+import { listFacebookPages } from "@/lib/social/facebook";
+
+const GRAPH_VERSION = "v21.0";
+
+export async function GET(request: Request) {
+  const session = await auth();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
+  if (!session?.user?.id) {
+    return NextResponse.redirect(new URL("/login", appUrl));
+  }
+
+  const { searchParams } = new URL(request.url);
+  const code = searchParams.get("code");
+  const state = searchParams.get("state");
+  const cookieState = request.headers
+    .get("cookie")
+    ?.split("; ")
+    .find((c) => c.startsWith("meta_oauth_state="))
+    ?.split("=")[1];
+
+  if (!code || !state || state !== cookieState) {
+    return NextResponse.redirect(new URL("/accounts?error=meta_oauth_state", appUrl));
+  }
+
+  try {
+    const redirectUri = `${appUrl}/api/social/callback/meta`;
+    const tokenParams = new URLSearchParams({
+      client_id: process.env.META_APP_ID ?? "",
+      client_secret: process.env.META_APP_SECRET ?? "",
+      redirect_uri: redirectUri,
+      code,
+    });
+    const tokenRes = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/oauth/access_token?${tokenParams}`
+    );
+    const tokenData = await tokenRes.json();
+    if (!tokenRes.ok) throw new Error(tokenData?.error?.message || "Token exchange failed");
+
+    const pages = await listFacebookPages(tokenData.access_token);
+
+    for (const page of pages) {
+      await prisma.socialAccount.upsert({
+        where: {
+          userId_platform_accountId: {
+            userId: session.user.id,
+            platform: "FACEBOOK",
+            accountId: page.id,
+          },
+        },
+        update: { accessToken: encrypt(page.access_token), accountName: page.name, isActive: true },
+        create: {
+          userId: session.user.id,
+          platform: "FACEBOOK",
+          accountId: page.id,
+          accountName: page.name,
+          accessToken: encrypt(page.access_token),
+        },
+      });
+
+      if (page.instagram_business_account?.id) {
+        await prisma.socialAccount.upsert({
+          where: {
+            userId_platform_accountId: {
+              userId: session.user.id,
+              platform: "INSTAGRAM",
+              accountId: page.instagram_business_account.id,
+            },
+          },
+          update: { accessToken: encrypt(page.access_token), accountName: page.name, isActive: true },
+          create: {
+            userId: session.user.id,
+            platform: "INSTAGRAM",
+            accountId: page.instagram_business_account.id,
+            accountName: page.name,
+            accessToken: encrypt(page.access_token),
+            metadata: { linkedFacebookPageId: page.id },
+          },
+        });
+      }
+    }
+
+    const response = NextResponse.redirect(new URL("/accounts?connected=meta", appUrl));
+    response.cookies.delete("meta_oauth_state");
+    return response;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "unknown_error";
+    return NextResponse.redirect(
+      new URL(`/accounts?error=${encodeURIComponent(message)}`, appUrl)
+    );
+  }
+}
