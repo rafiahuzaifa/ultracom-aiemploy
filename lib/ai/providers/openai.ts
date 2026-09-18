@@ -43,16 +43,15 @@ export const openaiTextProvider: TextProvider = {
   },
 };
 
-/** Image generation provider backed by OpenAI DALL·E 3. */
+/** Image generation provider backed by OpenAI's gpt-image-1 model. */
 export const openaiImageProvider: ImageProvider = {
   name: "openai",
   async generateImage(prompt: string) {
     const result = await getClient().images.generate({
-      model: "dall-e-3",
+      model: "gpt-image-1",
       prompt,
       size: "1024x1024",
-      quality: "hd",
-      response_format: "b64_json",
+      quality: "high",
       n: 1,
     });
     const base64 = result.data?.[0]?.b64_json;

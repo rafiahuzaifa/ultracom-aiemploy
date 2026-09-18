@@ -20,7 +20,7 @@ export const geminiTextProvider: TextProvider = {
     prompt: string;
     schema: Record<string, unknown>;
   }): Promise<T> {
-    const model = process.env.GEMINI_TEXT_MODEL || "gemini-2.0-flash";
+    const model = process.env.GEMINI_TEXT_MODEL || "gemini-3.6-flash";
     const res = await fetch(
       `${API_BASE}/models/${model}:generateContent?key=${requireKey()}`,
       {
@@ -50,19 +50,24 @@ export const geminiTextProvider: TextProvider = {
   },
 };
 
-/** Image generation provider backed by Google Imagen 3 (via the Gemini API). */
+/**
+ * Image generation provider backed by Gemini's multimodal image models
+ * (e.g. gemini-2.5-flash-image). These generate images through the same
+ * generateContent endpoint used for text, returning inline base64 image
+ * data in the response parts rather than through a separate predict API.
+ */
 export const geminiImageProvider: ImageProvider = {
   name: "gemini",
   async generateImage(prompt: string) {
-    const model = process.env.GEMINI_IMAGE_MODEL || "imagen-3.0-generate-002";
+    const model = process.env.GEMINI_IMAGE_MODEL || "gemini-2.5-flash-image";
     const res = await fetch(
-      `${API_BASE}/models/${model}:predict?key=${requireKey()}`,
+      `${API_BASE}/models/${model}:generateContent?key=${requireKey()}`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          instances: [{ prompt }],
-          parameters: { sampleCount: 1, aspectRatio: "1:1" },
+          contents: [{ role: "user", parts: [{ text: prompt }] }],
+          generationConfig: { responseModalities: ["IMAGE"] },
         }),
       }
     );
@@ -73,9 +78,10 @@ export const geminiImageProvider: ImageProvider = {
     }
 
     const data = await res.json();
-    const prediction = data?.predictions?.[0];
-    const base64: string | undefined = prediction?.bytesBase64Encoded;
+    const parts = data?.candidates?.[0]?.content?.parts ?? [];
+    const imagePart = parts.find((p: { inlineData?: { data?: string } }) => p.inlineData?.data);
+    const base64: string | undefined = imagePart?.inlineData?.data;
     if (!base64) throw new Error("Gemini returned no image data.");
-    return { base64, mimeType: prediction?.mimeType || "image/png" };
+    return { base64, mimeType: imagePart.inlineData.mimeType || "image/png" };
   },
 };
