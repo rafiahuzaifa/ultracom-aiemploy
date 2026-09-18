@@ -3,8 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Used only for `prisma migrate`/`db push` — Supabase's transaction-mode
+  // pooler (used at runtime for serverless-friendly connection pooling)
+  // doesn't support the prepared statements the schema engine needs.
+  directUrl = env("DIRECT_URL")
 }
 
 // ---------- Auth (NextAuth.js) ----------
