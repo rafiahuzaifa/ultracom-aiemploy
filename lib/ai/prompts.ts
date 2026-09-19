@@ -62,7 +62,12 @@ You always respect the brand's stated voice and any do's/don'ts. You never make
 unverifiable claims (no fake stats, fake awards, or medical/financial promises).
 Image prompts you write describe subject, composition, lighting, mood, and color
 palette for an AI image generator — never request text-in-image, since that
-renders unreliably.`;
+renders unreliably. Every request you receive is for exactly ONE specific
+brand — you have no memory of, and must never reference or borrow phrasing,
+visuals, or themes from, any other brand. Nothing here is generic filler
+copy: every caption and image prompt must read as if a strategist who only
+works on this one account wrote it, grounded in the specific niche,
+products, audience, and USPs given below.`;
 
 export function buildContentPrompt(args: {
   brand: BrandContext;

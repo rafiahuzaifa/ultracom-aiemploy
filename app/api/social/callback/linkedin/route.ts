@@ -13,14 +13,20 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
-  const cookieState = request.headers
+  const cookieValue = request.headers
     .get("cookie")
     ?.split("; ")
     .find((c) => c.startsWith("linkedin_oauth_state="))
     ?.split("=")[1];
+  const [cookieNonce, brandId] = cookieValue?.split(":") ?? [];
 
-  if (!code || !state || state !== cookieState) {
+  if (!code || !state || !brandId || state !== cookieNonce) {
     return NextResponse.redirect(new URL("/accounts?error=linkedin_oauth_state", appUrl));
+  }
+
+  const brand = await prisma.brand.findFirst({ where: { id: brandId, userId: session.user.id } });
+  if (!brand) {
+    return NextResponse.redirect(new URL("/accounts?error=brand_not_found", appUrl));
   }
 
   try {
@@ -56,11 +62,7 @@ export async function GET(request: Request) {
       const orgId = String(org.id);
       await prisma.socialAccount.upsert({
         where: {
-          userId_platform_accountId: {
-            userId: session.user.id,
-            platform: "LINKEDIN",
-            accountId: orgId,
-          },
+          brandId_platform_accountId: { brandId, platform: "LINKEDIN", accountId: orgId },
         },
         update: {
           accessToken: encrypt(accessToken),
@@ -69,7 +71,7 @@ export async function GET(request: Request) {
           isActive: true,
         },
         create: {
-          userId: session.user.id,
+          brandId,
           platform: "LINKEDIN",
           accountId: orgId,
           accountName: org.localizedName,
@@ -79,13 +81,15 @@ export async function GET(request: Request) {
       });
     }
 
-    const response = NextResponse.redirect(new URL("/accounts?connected=linkedin", appUrl));
+    const response = NextResponse.redirect(
+      new URL(`/accounts?brandId=${brandId}&connected=linkedin`, appUrl)
+    );
     response.cookies.delete("linkedin_oauth_state");
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown_error";
     return NextResponse.redirect(
-      new URL(`/accounts?error=${encodeURIComponent(message)}`, appUrl)
+      new URL(`/accounts?brandId=${brandId}&error=${encodeURIComponent(message)}`, appUrl)
     );
   }
 }

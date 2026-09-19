@@ -51,41 +51,17 @@ model VerificationToken {
 // ---------- Core domain ----------
 
 model User {
-  id             String          @id @default(cuid())
-  email          String          @unique
-  emailVerified  DateTime?
-  name           String?
-  image          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  accounts       Account[]
-  sessions       Session[]
-  websites       Website[]
-  socialAccounts SocialAccount[]
-  generatedPosts GeneratedPost[]
-  agentRuns      AgentRun[]
-  settings       AgentSettings?
-  brandProfile   BrandProfile?
-  notifications  Notification[]
-}
-
-/** Raw connected website + what the agent scraped/inferred from it. */
-model Website {
-  id             String          @id @default(cuid())
-  userId         String
-  url            String
-  name           String?
-  niche          String?
-  products       Json?
-  analysis       Json?
-  analyzedAt     DateTime?
-  isPrimary      Boolean         @default(false)
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  brandProfiles  BrandProfile[]
-  generatedPosts GeneratedPost[]
-  agentRuns      AgentRun[]
+  id            String         @id @default(cuid())
+  email         String         @unique
+  emailVerified DateTime?
+  name          String?
+  image         String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  accounts      Account[]
+  sessions      Session[]
+  brands        Brand[]
+  notifications Notification[]
 }
 
 enum Language {
@@ -101,14 +77,39 @@ enum PostType {
 }
 
 /**
+ * A brand/website the user manages. Everything else — social connections,
+ * generated posts, agent runs, schedule — scopes to a Brand so one account
+ * can run several independent marketing operations side by side.
+ */
+model Brand {
+  id         String    @id @default(cuid())
+  userId     String
+  name       String
+  websiteUrl String
+  niche      String?
+  products   Json?
+  analysis   Json?
+  analyzedAt DateTime?
+  isPrimary  Boolean   @default(false)
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  profile        BrandProfile?
+  settings       AgentSettings?
+  socialAccounts SocialAccount[]
+  generatedPosts GeneratedPost[]
+  agentRuns      AgentRun[]
+}
+
+/**
  * User-curated brand identity layer, editable independently of whatever the
  * website scrape produced. This is what every content-generation prompt
  * reads from.
  */
 model BrandProfile {
   id                  String     @id @default(cuid())
-  userId              String     @unique
-  websiteId           String?
+  brandId             String     @unique
   brandVoice          String?
   tone                String?
   targetAudience      String?
@@ -119,8 +120,7 @@ model BrandProfile {
   donts               String?
   createdAt           DateTime   @default(now())
   updatedAt           DateTime   @updatedAt
-  user                User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  website             Website?   @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+  brand               Brand      @relation(fields: [brandId], references: [id], onDelete: Cascade)
 }
 
 enum SocialPlatform {
@@ -131,7 +131,7 @@ enum SocialPlatform {
 
 model SocialAccount {
   id           String         @id @default(cuid())
-  userId       String
+  brandId      String
   platform     SocialPlatform
   accountId    String
   accountName  String?
@@ -143,9 +143,9 @@ model SocialAccount {
   isActive     Boolean        @default(true)
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
-  user         User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand        Brand          @relation(fields: [brandId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, platform, accountId])
+  @@unique([brandId, platform, accountId])
 }
 
 enum PostStatus {
@@ -167,12 +167,11 @@ enum PostStatus {
  * where Localized = { en?: string, ur?: string }
  */
 model GeneratedPost {
-  id              String     @id @default(cuid())
-  userId          String
-  websiteId       String?
+  id              String      @id @default(cuid())
+  brandId         String
   agentRunId      String?
-  status          PostStatus @default(PENDING_APPROVAL)
-  postType        PostType   @default(IMAGE)
+  status          PostStatus  @default(PENDING_APPROVAL)
+  postType        PostType    @default(IMAGE)
   theme           String?
   imageUrl        String?
   imagePrompt     String?
@@ -185,11 +184,10 @@ model GeneratedPost {
   approvedAt      DateTime?
   publishedAt     DateTime?
   publishResults  Json?
-  createdAt       DateTime   @default(now())
-  updatedAt       DateTime   @updatedAt
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  website         Website?   @relation(fields: [websiteId], references: [id], onDelete: SetNull)
-  agentRun        AgentRun?  @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  brand           Brand       @relation(fields: [brandId], references: [id], onDelete: Cascade)
+  agentRun        AgentRun?   @relation(fields: [agentRunId], references: [id], onDelete: SetNull)
   media           PostMedia[]
 }
 
@@ -214,8 +212,7 @@ enum AgentRunStatus {
 
 model AgentRun {
   id             String          @id @default(cuid())
-  userId         String
-  websiteId      String?
+  brandId        String
   status         AgentRunStatus  @default(RUNNING)
   trigger        String
   postsGenerated Int             @default(0)
@@ -223,21 +220,21 @@ model AgentRun {
   finishedAt     DateTime?
   steps          Json?
   error          String?
-  user           User            @relation(fields: [userId], references: [id], onDelete: Cascade)
-  website        Website?        @relation(fields: [websiteId], references: [id], onDelete: SetNull)
+  brand          Brand           @relation(fields: [brandId], references: [id], onDelete: Cascade)
   posts          GeneratedPost[]
 }
 
+/** Per-brand agent scheduling. */
 model AgentSettings {
   id             String    @id @default(cuid())
-  userId         String    @unique
+  brandId        String    @unique
   isActive       Boolean   @default(true)
   frequencyHours Int       @default(6)
   postsPerRun    Int       @default(2)
   notifyOnReady  Boolean   @default(true)
   autoApprove    Boolean   @default(false)
   lastRunAt      DateTime?
-  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brand          Brand     @relation(fields: [brandId], references: [id], onDelete: Cascade)
 }
 
 model Notification {

@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { isErrorResponse, requireUserId } from "@/lib/api-helpers";
+import { isErrorResponse, requireOwnedBrand, requireUserId } from "@/lib/api-helpers";
 
-const brandProfileSchema = z.object({
+const profileSchema = z.object({
   brandVoice: z.string().optional(),
   tone: z.string().optional(),
   targetAudience: z.string().optional(),
@@ -12,30 +12,37 @@ const brandProfileSchema = z.object({
   contentTypes: z.array(z.enum(["IMAGE", "CAROUSEL", "REEL"])).min(1).optional(),
   dos: z.string().optional(),
   donts: z.string().optional(),
-  websiteId: z.string().optional(),
 });
 
-export async function GET() {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId();
   if (isErrorResponse(userId)) return userId;
+  const { id } = await params;
+
+  const brand = await requireOwnedBrand(userId, id);
+  if (isErrorResponse(brand)) return brand;
 
   const profile = await prisma.brandProfile.upsert({
-    where: { userId },
+    where: { brandId: id },
     update: {},
-    create: { userId },
+    create: { brandId: id },
   });
   return NextResponse.json({ profile });
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId();
   if (isErrorResponse(userId)) return userId;
+  const { id } = await params;
 
-  const body = brandProfileSchema.parse(await request.json());
+  const brand = await requireOwnedBrand(userId, id);
+  if (isErrorResponse(brand)) return brand;
+
+  const body = profileSchema.parse(await request.json());
   const profile = await prisma.brandProfile.upsert({
-    where: { userId },
+    where: { brandId: id },
     update: body,
-    create: { userId, ...body },
+    create: { brandId: id, ...body },
   });
   return NextResponse.json({ profile });
 }

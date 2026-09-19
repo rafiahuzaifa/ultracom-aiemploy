@@ -13,7 +13,7 @@ export const publishPost = inngest.createFunction(
     const post = await step.run("load-post", () =>
       prisma.generatedPost.findUniqueOrThrow({
         where: { id: postId },
-        include: { media: { orderBy: { order: "asc" } } },
+        include: { media: { orderBy: { order: "asc" } }, brand: true },
       })
     );
 
@@ -21,8 +21,10 @@ export const publishPost = inngest.createFunction(
       prisma.generatedPost.update({ where: { id: postId }, data: { status: "PUBLISHING" } })
     );
 
+    // Only accounts connected to THIS post's brand are ever eligible — a
+    // post generated for brand A can never publish to brand B's pages.
     const accounts = await step.run("load-accounts", () =>
-      prisma.socialAccount.findMany({ where: { userId: post.userId, isActive: true } })
+      prisma.socialAccount.findMany({ where: { brandId: post.brandId, isActive: true } })
     );
 
     // Inngest types step.run's return as its JSON-serialized shape (Date ->
@@ -51,12 +53,12 @@ export const publishPost = inngest.createFunction(
 
     await step.run("notify-result", () =>
       notifyUser({
-        userId: post.userId,
+        userId: post.brand.userId,
         title: allSuccess
-          ? "Post published to all platforms"
+          ? `Post published to all platforms — ${post.brand.name}`
           : anySuccess
-            ? "Post partially published — some platforms failed"
-            : "Post failed to publish",
+            ? `Post partially published (${post.brand.name}) — some platforms failed`
+            : `Post failed to publish — ${post.brand.name}`,
         body: results
           .map((r) => `${r.platform}: ${r.success ? "success" : r.error}`)
           .join(" · "),

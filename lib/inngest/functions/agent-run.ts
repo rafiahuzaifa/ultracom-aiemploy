@@ -14,17 +14,16 @@ export const agentRun = inngest.createFunction(
   { id: "agent-run", retries: 2 },
   { event: "agent/run.requested" },
   async ({ event, step }) => {
-    const { userId, websiteId, trigger } = event.data;
+    const { brandId, trigger } = event.data;
 
-    const { brand, website, settings } = await step.run("load-context", () =>
-      buildBrandContext(userId, websiteId)
+    const { brand, context, settings } = await step.run("load-context", () =>
+      buildBrandContext(brandId)
     );
 
     const agentRunRecord = await step.run("create-run-record", () =>
       prisma.agentRun.create({
         data: {
-          userId,
-          websiteId: website?.id,
+          brandId,
           trigger,
           steps: [{ step: "started", at: new Date().toISOString() }],
         },
@@ -32,15 +31,18 @@ export const agentRun = inngest.createFunction(
     );
 
     try {
-      const research = await step.run("market-research", () => runResearchPhase(brand));
+      // Research and content generation only ever see THIS brand's context
+      // (niche, voice, audience, USPs) — nothing here is shared or cached
+      // across brands, so output for brand A can never bleed into brand B.
+      const research = await step.run("market-research", () => runResearchPhase(context));
 
       const postCount = settings?.postsPerRun ?? 2;
-      const postTypes = pickPostTypesForRun(brand.contentTypes, postCount);
+      const postTypes = pickPostTypesForRun(context.contentTypes, postCount);
 
       const createdPosts = [];
       for (const [index, postType] of postTypes.entries()) {
         const draft = await step.run(`generate-content-${index}`, () =>
-          runContentPhase({ brand, research, postType })
+          runContentPhase({ brand: context, research, postType })
         );
 
         const { coverImageUrl, slideImages } = await step.run(`generate-image-${index}`, () =>
@@ -49,8 +51,7 @@ export const agentRun = inngest.createFunction(
 
         const post = await step.run(`persist-post-${index}`, () =>
           persistGeneratedPost({
-            userId,
-            websiteId: website?.id,
+            brandId,
             agentRunId: agentRunRecord.id,
             researchSummary: research.summary,
             draft,
@@ -80,7 +81,7 @@ export const agentRun = inngest.createFunction(
 
       await step.run("update-last-run", () =>
         prisma.agentSettings.update({
-          where: { userId },
+          where: { brandId },
           data: { lastRunAt: new Date() },
         })
       );
@@ -88,8 +89,8 @@ export const agentRun = inngest.createFunction(
       if (settings?.notifyOnReady && createdPosts.length > 0) {
         await step.run("notify-user", () =>
           notifyUser({
-            userId,
-            title: `${createdPosts.length} new post${createdPosts.length > 1 ? "s" : ""} ready for review`,
+            userId: brand.userId,
+            title: `${createdPosts.length} new post${createdPosts.length > 1 ? "s" : ""} ready for review — ${brand.name}`,
             body: research.summary,
             href: "/",
           })

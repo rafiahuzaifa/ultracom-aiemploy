@@ -1,13 +1,20 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { isErrorResponse, requireUserId } from "@/lib/api-helpers";
+import { isErrorResponse, requireOwnedBrand, requireUserId } from "@/lib/api-helpers";
 
-export async function GET() {
+export async function GET(request: Request) {
   const userId = await requireUserId();
   if (isErrorResponse(userId)) return userId;
 
+  const { searchParams } = new URL(request.url);
+  const brandId = searchParams.get("brandId");
+  if (!brandId) return NextResponse.json({ error: "brandId is required" }, { status: 400 });
+
+  const brand = await requireOwnedBrand(userId, brandId);
+  if (isErrorResponse(brand)) return brand;
+
   const accounts = await prisma.socialAccount.findMany({
-    where: { userId },
+    where: { brandId },
     select: {
       id: true,
       platform: true,

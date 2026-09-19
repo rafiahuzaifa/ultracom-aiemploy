@@ -62,6 +62,7 @@ async function scrapeWebsiteText(url: string): Promise<string> {
   return `Title: ${title}\nDescription: ${description}\n\n${bodyText}`.slice(0, 20000);
 }
 
+/** Scrapes a brand's website and infers its niche, products, voice, audience, and USPs. */
 export async function analyzeWebsite(url: string): Promise<WebsiteAnalysis> {
   const text = await scrapeWebsiteText(url);
   const provider = getTextProvider();

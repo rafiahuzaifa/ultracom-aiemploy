@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, Loader2, LogOut, Play } from "lucide-react";
+import { Bell, ChevronDown, Loader2, LogOut, Play } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { formatRelativeTime } from "@/lib/utils";
+import { useBrand } from "@/components/providers/brand-provider";
 
 interface NotificationItem {
   id: string;
@@ -27,6 +28,7 @@ interface NotificationItem {
 
 export function Topbar() {
   const { data: session } = useSession();
+  const { currentBrand, brands } = useBrand();
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [triggering, setTriggering] = useState(false);
 
@@ -48,12 +50,16 @@ export function Topbar() {
 
   const unreadCount = notifications.filter((n) => !n.readAt).length;
 
-  async function handleTrigger() {
+  async function handleTrigger(brandId: string, label: string) {
     setTriggering(true);
     try {
-      const res = await fetch("/api/agent/trigger", { method: "POST" });
+      const res = await fetch("/api/agent/trigger", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brandId }),
+      });
       if (!res.ok) throw new Error("Failed to trigger agent");
-      toast.success("Agent run started — new drafts will appear shortly.");
+      toast.success(`Agent run started for ${label} — new drafts will appear shortly.`);
     } catch {
       toast.error("Could not start the agent run. Check your API keys and try again.");
     } finally {
@@ -61,18 +67,37 @@ export function Topbar() {
     }
   }
 
-  const initials = session?.user?.name?.slice(0, 2).toUpperCase() ?? "SF";
+  const initials = session?.user?.name?.slice(0, 2).toUpperCase() ?? "AI";
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-line/60 bg-panel/40 px-6">
       <div className="font-mono-ui text-xs uppercase tracking-widest text-muted-foreground">
-        Marketing Agent
+        {currentBrand ? currentBrand.name : "Marketing Agent"}
       </div>
       <div className="flex items-center gap-3">
-        <Button size="sm" onClick={handleTrigger} disabled={triggering}>
-          {triggering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-          Run agent now
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="sm" disabled={triggering || !currentBrand}>
+              {triggering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
+              Run agent
+              <ChevronDown className="h-3.5 w-3.5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem
+              disabled={!currentBrand}
+              onClick={() => currentBrand && handleTrigger(currentBrand.id, currentBrand.name)}
+            >
+              Run for {currentBrand?.name ?? "current brand"}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={brands.length === 0}
+              onClick={() => handleTrigger("all", "all brands")}
+            >
+              Run for all brands ({brands.length})
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

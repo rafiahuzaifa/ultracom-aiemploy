@@ -4,22 +4,19 @@ import { generateAdPost } from "@/lib/ai/generate-content";
 import { generateAdImage } from "@/lib/ai/generate-image";
 import type { BrandContext, ContentPostType, GeneratedPostDraft } from "@/lib/ai/types";
 
-export async function buildBrandContext(userId: string, websiteId?: string | null) {
-  const website = websiteId
-    ? await prisma.website.findFirst({ where: { id: websiteId, userId } })
-    : await prisma.website.findFirst({ where: { userId }, orderBy: { isPrimary: "desc" } });
-
+export async function buildBrandContext(brandId: string) {
+  const brand = await prisma.brand.findUniqueOrThrow({ where: { id: brandId } });
   const [profile, settings] = await Promise.all([
-    prisma.brandProfile.findUnique({ where: { userId } }),
-    prisma.agentSettings.findUnique({ where: { userId } }),
+    prisma.brandProfile.findUnique({ where: { brandId } }),
+    prisma.agentSettings.findUnique({ where: { brandId } }),
   ]);
 
-  const analysis = (website?.analysis ?? {}) as Record<string, unknown>;
+  const analysis = (brand.analysis ?? {}) as Record<string, unknown>;
 
-  const brand: BrandContext = {
-    websiteUrl: website?.url,
-    niche: website?.niche ?? (analysis.niche as string | undefined),
-    products: (website?.products as string[] | null) ?? undefined,
+  const context: BrandContext = {
+    websiteUrl: brand.websiteUrl,
+    niche: brand.niche ?? (analysis.niche as string | undefined),
+    products: (brand.products as string[] | null) ?? undefined,
     targetAudience: profile?.targetAudience ?? undefined,
     brandVoice: profile?.brandVoice ?? undefined,
     tone: profile?.tone ?? undefined,
@@ -30,7 +27,7 @@ export async function buildBrandContext(userId: string, websiteId?: string | nul
     donts: profile?.donts ?? undefined,
   };
 
-  return { brand, website, settings, profile };
+  return { brand, context, settings, profile };
 }
 
 export async function runResearchPhase(brand: BrandContext) {
@@ -69,8 +66,7 @@ export async function runImagePhase(draft: GeneratedPostDraft) {
 }
 
 export async function persistGeneratedPost(args: {
-  userId: string;
-  websiteId?: string | null;
+  brandId: string;
   agentRunId: string;
   researchSummary: string;
   draft: GeneratedPostDraft;
@@ -78,13 +74,11 @@ export async function persistGeneratedPost(args: {
   slideImages: string[];
   autoApprove: boolean;
 }) {
-  const { userId, websiteId, agentRunId, researchSummary, draft, coverImageUrl, slideImages, autoApprove } =
-    args;
+  const { brandId, agentRunId, researchSummary, draft, coverImageUrl, slideImages, autoApprove } = args;
 
   return prisma.generatedPost.create({
     data: {
-      userId,
-      websiteId: websiteId ?? undefined,
+      brandId,
       agentRunId,
       status: autoApprove ? "APPROVED" : "PENDING_APPROVAL",
       postType: draft.postType,

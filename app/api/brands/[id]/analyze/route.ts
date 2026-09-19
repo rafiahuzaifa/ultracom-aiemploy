@@ -1,19 +1,19 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { analyzeWebsite } from "@/lib/website/analyze";
-import { isErrorResponse, requireUserId } from "@/lib/api-helpers";
+import { analyzeWebsite } from "@/lib/brand/analyze";
+import { isErrorResponse, requireOwnedBrand, requireUserId } from "@/lib/api-helpers";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId();
   if (isErrorResponse(userId)) return userId;
   const { id } = await params;
 
-  const website = await prisma.website.findFirst({ where: { id, userId } });
-  if (!website) return NextResponse.json({ error: "Website not found" }, { status: 404 });
+  const brand = await requireOwnedBrand(userId, id);
+  if (isErrorResponse(brand)) return brand;
 
   try {
-    const analysis = await analyzeWebsite(website.url);
-    const updated = await prisma.website.update({
+    const analysis = await analyzeWebsite(brand.websiteUrl);
+    const updated = await prisma.brand.update({
       where: { id },
       data: {
         niche: analysis.niche,
@@ -23,13 +23,13 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       },
     });
 
-    // Seed the brand profile from analysis, but never overwrite fields the
-    // user has already customized — analysis only fills in blanks.
-    const existingProfile = await prisma.brandProfile.findUnique({ where: { userId } });
+    // Seed this brand's profile from its own analysis, but never overwrite
+    // fields already customized — analysis only fills in blanks, and never
+    // touches any other brand's profile.
+    const existingProfile = await prisma.brandProfile.findUnique({ where: { brandId: id } });
     await prisma.brandProfile.upsert({
-      where: { userId },
+      where: { brandId: id },
       update: {
-        websiteId: existingProfile?.websiteId ?? id,
         targetAudience: existingProfile?.targetAudience || analysis.targetAudience,
         brandVoice: existingProfile?.brandVoice || analysis.brandVoice,
         uniqueSellingPoints:
@@ -38,15 +38,14 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
             : analysis.uniqueSellingPoints,
       },
       create: {
-        userId,
-        websiteId: id,
+        brandId: id,
         targetAudience: analysis.targetAudience,
         brandVoice: analysis.brandVoice,
         uniqueSellingPoints: analysis.uniqueSellingPoints,
       },
     });
 
-    return NextResponse.json({ website: updated });
+    return NextResponse.json({ brand: updated });
   } catch (error) {
     return NextResponse.json(
       { error: error instanceof Error ? error.message : "Analysis failed" },

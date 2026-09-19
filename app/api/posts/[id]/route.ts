@@ -30,7 +30,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   const post = await prisma.generatedPost.findFirst({
-    where: { id, userId },
+    where: { id, brand: { userId } },
     include: { media: { orderBy: { order: "asc" } } },
   });
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
@@ -43,7 +43,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
 
   const post = await prisma.generatedPost.findFirst({
-    where: { id, userId },
+    where: { id, brand: { userId } },
     include: { media: { orderBy: { order: "asc" } } },
   });
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
@@ -130,7 +130,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (isErrorResponse(userId)) return userId;
   const { id } = await params;
 
-  const post = await prisma.generatedPost.findFirst({ where: { id, userId } });
+  const post = await prisma.generatedPost.findFirst({ where: { id, brand: { userId } } });
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
   await prisma.generatedPost.delete({ where: { id } });

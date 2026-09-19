@@ -14,14 +14,12 @@ export const regeneratePost = inngest.createFunction(
       prisma.generatedPost.findUniqueOrThrow({ where: { id: postId } })
     );
 
-    const { brand } = await step.run("load-context", () =>
-      buildBrandContext(existing.userId, existing.websiteId)
-    );
+    const { context } = await step.run("load-context", () => buildBrandContext(existing.brandId));
 
-    const research = await step.run("market-research", () => runResearchPhase(brand));
+    const research = await step.run("market-research", () => runResearchPhase(context));
     const draft = await step.run("generate-content", () =>
       runContentPhase({
-        brand,
+        brand: context,
         research,
         postType: existing.postType as ContentPostType,
         theme: existing.theme ?? undefined,

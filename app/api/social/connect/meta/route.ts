@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { prisma } from "@/lib/db";
 import { createOAuthState } from "@/lib/social/oauth-state";
 
 const SCOPES = [
@@ -11,23 +12,36 @@ const SCOPES = [
   "business_management",
 ].join(",");
 
-export async function GET() {
+export async function GET(request: Request) {
   const session = await auth();
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
   if (!session?.user?.id) {
-    return NextResponse.redirect(new URL("/login", process.env.NEXT_PUBLIC_APP_URL));
+    return NextResponse.redirect(new URL("/login", appUrl));
   }
 
-  const state = createOAuthState();
-  const redirectUri = `${process.env.NEXT_PUBLIC_APP_URL}/api/social/callback/meta`;
+  const brandId = new URL(request.url).searchParams.get("brandId");
+  if (!brandId) {
+    return NextResponse.redirect(new URL("/accounts?error=missing_brand", appUrl));
+  }
+  const brand = await prisma.brand.findFirst({ where: { id: brandId, userId: session.user.id } });
+  if (!brand) {
+    return NextResponse.redirect(new URL("/accounts?error=brand_not_found", appUrl));
+  }
+
+  const nonce = createOAuthState();
+  const redirectUri = `${appUrl}/api/social/callback/meta`;
   const authUrl = new URL("https://www.facebook.com/v21.0/dialog/oauth");
   authUrl.searchParams.set("client_id", process.env.META_APP_ID ?? "");
   authUrl.searchParams.set("redirect_uri", redirectUri);
-  authUrl.searchParams.set("state", state);
+  authUrl.searchParams.set("state", nonce);
   authUrl.searchParams.set("scope", SCOPES);
   authUrl.searchParams.set("response_type", "code");
 
   const response = NextResponse.redirect(authUrl);
-  response.cookies.set("meta_oauth_state", state, {
+  // Cookie carries both the CSRF nonce and which brand this connection is
+  // for, so the callback knows where to attach the resulting accounts
+  // without trusting anything from the client-controlled query string.
+  response.cookies.set("meta_oauth_state", `${nonce}:${brandId}`, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     maxAge: 600,

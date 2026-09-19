@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { isErrorResponse, requireUserId } from "@/lib/api-helpers";
+import { isErrorResponse, requireOwnedBrand, requireUserId } from "@/lib/api-helpers";
 import type { PostStatus } from "@prisma/client";
 
 export async function GET(request: Request) {
@@ -9,12 +9,22 @@ export async function GET(request: Request) {
 
   const { searchParams } = new URL(request.url);
   const status = searchParams.get("status") as PostStatus | null;
+  const brandId = searchParams.get("brandId");
+
+  if (brandId) {
+    const brand = await requireOwnedBrand(userId, brandId);
+    if (isErrorResponse(brand)) return brand;
+  }
 
   const posts = await prisma.generatedPost.findMany({
-    where: { userId, ...(status ? { status } : {}) },
+    where: {
+      brand: { userId },
+      ...(brandId ? { brandId } : {}),
+      ...(status ? { status } : {}),
+    },
     orderBy: { createdAt: "desc" },
     take: 50,
-    include: { media: { orderBy: { order: "asc" } } },
+    include: { media: { orderBy: { order: "asc" } }, brand: { select: { id: true, name: true } } },
   });
 
   return NextResponse.json({ posts });

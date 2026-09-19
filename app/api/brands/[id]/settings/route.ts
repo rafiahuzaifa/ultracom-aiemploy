@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { isErrorResponse, requireUserId } from "@/lib/api-helpers";
+import { isErrorResponse, requireOwnedBrand, requireUserId } from "@/lib/api-helpers";
 
 const settingsSchema = z.object({
   isActive: z.boolean().optional(),
@@ -11,27 +11,35 @@ const settingsSchema = z.object({
   autoApprove: z.boolean().optional(),
 });
 
-export async function GET() {
+export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId();
   if (isErrorResponse(userId)) return userId;
+  const { id } = await params;
+
+  const brand = await requireOwnedBrand(userId, id);
+  if (isErrorResponse(brand)) return brand;
 
   const settings = await prisma.agentSettings.upsert({
-    where: { userId },
+    where: { brandId: id },
     update: {},
-    create: { userId },
+    create: { brandId: id },
   });
   return NextResponse.json({ settings });
 }
 
-export async function PATCH(request: Request) {
+export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId();
   if (isErrorResponse(userId)) return userId;
+  const { id } = await params;
+
+  const brand = await requireOwnedBrand(userId, id);
+  if (isErrorResponse(brand)) return brand;
 
   const body = settingsSchema.parse(await request.json());
   const settings = await prisma.agentSettings.upsert({
-    where: { userId },
+    where: { brandId: id },
     update: body,
-    create: { userId, ...body },
+    create: { brandId: id, ...body },
   });
   return NextResponse.json({ settings });
 }

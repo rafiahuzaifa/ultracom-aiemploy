@@ -18,6 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useBrand } from "@/components/providers/brand-provider";
 
 const CONTENT_TYPE_OPTIONS: { value: PostType; label: string }[] = [
   { value: "IMAGE", label: "Single image posts" },
@@ -26,22 +27,26 @@ const CONTENT_TYPE_OPTIONS: { value: PostType; label: string }[] = [
 ];
 
 export function SettingsPanel() {
+  const { currentBrand, currentBrandId } = useBrand();
   const [settings, setSettings] = useState<AgentSettings | null>(null);
   const [profile, setProfile] = useState<BrandProfile | null>(null);
   const [uspsText, setUspsText] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetch("/api/settings")
+    if (!currentBrandId) return;
+    setSettings(null);
+    setProfile(null);
+    fetch(`/api/brands/${currentBrandId}/settings`)
       .then((r) => r.json())
       .then((d) => setSettings(d.settings));
-    fetch("/api/brand-profile")
+    fetch(`/api/brands/${currentBrandId}/profile`)
       .then((r) => r.json())
       .then((d) => {
         setProfile(d.profile);
         setUspsText((d.profile?.uniqueSellingPoints ?? []).join(", "));
       });
-  }, []);
+  }, [currentBrandId]);
 
   function toggleContentType(type: PostType) {
     if (!profile) return;
@@ -54,11 +59,11 @@ export function SettingsPanel() {
   }
 
   async function save() {
-    if (!settings || !profile) return;
+    if (!settings || !profile || !currentBrandId) return;
     setSaving(true);
     try {
       const [settingsRes, profileRes] = await Promise.all([
-        fetch("/api/settings", {
+        fetch(`/api/brands/${currentBrandId}/settings`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -69,7 +74,7 @@ export function SettingsPanel() {
             autoApprove: settings.autoApprove,
           }),
         }),
-        fetch("/api/brand-profile", {
+        fetch(`/api/brands/${currentBrandId}/profile`, {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -96,21 +101,30 @@ export function SettingsPanel() {
     }
   }
 
+  if (!currentBrand) {
+    return (
+      <p className="text-sm text-muted-foreground">
+        Select or add a brand under <a href="/brands" className="underline">Brands</a> to configure its settings.
+      </p>
+    );
+  }
+
   if (!settings || !profile) return null;
 
   return (
     <div className="max-w-2xl space-y-6">
       <div>
-        <h1 className="text-2xl font-bold tracking-tight">Agent settings</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Settings — {currentBrand.name}</h1>
         <p className="text-sm text-muted-foreground">
-          Control how often the agent runs, what it creates, and how it represents your brand.
+          Control how often the agent runs, what it creates, and how it represents this brand
+          specifically. Nothing here affects your other brands.
         </p>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Schedule</CardTitle>
-          <CardDescription>How often the agent researches and drafts new posts.</CardDescription>
+          <CardDescription>How often the agent researches and drafts new posts for this brand.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between">
@@ -166,7 +180,7 @@ export function SettingsPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Language</CardTitle>
-          <CardDescription>Which language(s) captions are generated in.</CardDescription>
+          <CardDescription>Which language(s) captions are generated in for this brand.</CardDescription>
         </CardHeader>
         <CardContent>
           <Select
@@ -188,7 +202,7 @@ export function SettingsPanel() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">Brand guidelines</CardTitle>
-          <CardDescription>Used alongside your website analysis in every generation.</CardDescription>
+          <CardDescription>Used alongside this brand&apos;s website analysis in every generation.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div>

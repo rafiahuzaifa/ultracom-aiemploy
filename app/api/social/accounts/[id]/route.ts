@@ -7,7 +7,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   if (isErrorResponse(userId)) return userId;
   const { id } = await params;
 
-  const account = await prisma.socialAccount.findFirst({ where: { id, userId } });
+  const account = await prisma.socialAccount.findFirst({ where: { id, brand: { userId } } });
   if (!account) return NextResponse.json({ error: "Account not found" }, { status: 404 });
 
   await prisma.socialAccount.delete({ where: { id } });

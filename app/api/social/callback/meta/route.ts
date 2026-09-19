@@ -16,14 +16,20 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
-  const cookieState = request.headers
+  const cookieValue = request.headers
     .get("cookie")
     ?.split("; ")
     .find((c) => c.startsWith("meta_oauth_state="))
     ?.split("=")[1];
+  const [cookieNonce, brandId] = cookieValue?.split(":") ?? [];
 
-  if (!code || !state || state !== cookieState) {
+  if (!code || !state || !brandId || state !== cookieNonce) {
     return NextResponse.redirect(new URL("/accounts?error=meta_oauth_state", appUrl));
+  }
+
+  const brand = await prisma.brand.findFirst({ where: { id: brandId, userId: session.user.id } });
+  if (!brand) {
+    return NextResponse.redirect(new URL("/accounts?error=brand_not_found", appUrl));
   }
 
   try {
@@ -45,15 +51,11 @@ export async function GET(request: Request) {
     for (const page of pages) {
       await prisma.socialAccount.upsert({
         where: {
-          userId_platform_accountId: {
-            userId: session.user.id,
-            platform: "FACEBOOK",
-            accountId: page.id,
-          },
+          brandId_platform_accountId: { brandId, platform: "FACEBOOK", accountId: page.id },
         },
         update: { accessToken: encrypt(page.access_token), accountName: page.name, isActive: true },
         create: {
-          userId: session.user.id,
+          brandId,
           platform: "FACEBOOK",
           accountId: page.id,
           accountName: page.name,
@@ -64,15 +66,15 @@ export async function GET(request: Request) {
       if (page.instagram_business_account?.id) {
         await prisma.socialAccount.upsert({
           where: {
-            userId_platform_accountId: {
-              userId: session.user.id,
+            brandId_platform_accountId: {
+              brandId,
               platform: "INSTAGRAM",
               accountId: page.instagram_business_account.id,
             },
           },
           update: { accessToken: encrypt(page.access_token), accountName: page.name, isActive: true },
           create: {
-            userId: session.user.id,
+            brandId,
             platform: "INSTAGRAM",
             accountId: page.instagram_business_account.id,
             accountName: page.name,
@@ -83,13 +85,15 @@ export async function GET(request: Request) {
       }
     }
 
-    const response = NextResponse.redirect(new URL("/accounts?connected=meta", appUrl));
+    const response = NextResponse.redirect(
+      new URL(`/accounts?brandId=${brandId}&connected=meta`, appUrl)
+    );
     response.cookies.delete("meta_oauth_state");
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown_error";
     return NextResponse.redirect(
-      new URL(`/accounts?error=${encodeURIComponent(message)}`, appUrl)
+      new URL(`/accounts?brandId=${brandId}&error=${encodeURIComponent(message)}`, appUrl)
     );
   }
 }
