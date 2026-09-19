@@ -3,8 +3,8 @@ import "./globals.css";
 import { Providers } from "@/components/providers";
 
 export const metadata: Metadata = {
-  title: "SignalForge | AI marketing operations",
-  description: "Research, create, approve, and publish your next campaign.",
+  title: "AutoPost AI | Autonomous marketing agent",
+  description: "Research, create, approve, and publish your next campaign — in English and Urdu.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

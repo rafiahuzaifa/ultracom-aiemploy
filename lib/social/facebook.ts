@@ -1,4 +1,4 @@
-import type { PublishInput, PublishResult } from "@/lib/social/types";
+import type { CarouselPublishInput, PublishInput, PublishResult } from "@/lib/social/types";
 
 const GRAPH_VERSION = "v21.0";
 const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
@@ -34,6 +34,52 @@ export async function publishToFacebook(input: PublishInput): Promise<PublishRes
       platform: "FACEBOOK",
       success: false,
       error: error instanceof Error ? error.message : "Unknown Facebook publish error",
+    };
+  }
+}
+
+/**
+ * Publishes a multi-photo carousel post to a Facebook Page: each image is
+ * first uploaded unpublished to get a photo ID, then a single feed post is
+ * created referencing all of them via attached_media.
+ */
+export async function publishCarouselToFacebook(input: CarouselPublishInput): Promise<PublishResult> {
+  try {
+    input.imageUrls.forEach(assertPublicUrl);
+
+    const photoIds = await Promise.all(
+      input.imageUrls.map(async (url) => {
+        const params = new URLSearchParams({
+          url,
+          published: "false",
+          access_token: input.accessToken,
+        });
+        const res = await fetch(`${GRAPH_BASE}/${input.accountId}/photos`, {
+          method: "POST",
+          body: params,
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data?.error?.message || `Facebook photo upload error (${res.status})`);
+        return data.id as string;
+      })
+    );
+
+    const postParams = new URLSearchParams({ message: input.caption, access_token: input.accessToken });
+    photoIds.forEach((id, index) => postParams.append(`attached_media[${index}]`, JSON.stringify({ media_fbid: id })));
+
+    const postRes = await fetch(`${GRAPH_BASE}/${input.accountId}/feed`, {
+      method: "POST",
+      body: postParams,
+    });
+    const postData = await postRes.json();
+    if (!postRes.ok) throw new Error(postData?.error?.message || `Facebook carousel post error (${postRes.status})`);
+
+    return { platform: "FACEBOOK", success: true, remotePostId: postData.id };
+  } catch (error) {
+    return {
+      platform: "FACEBOOK",
+      success: false,
+      error: error instanceof Error ? error.message : "Unknown Facebook carousel publish error",
     };
   }
 }

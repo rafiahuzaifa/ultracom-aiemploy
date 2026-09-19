@@ -21,8 +21,6 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     where: { id },
     data: {
       name: body.name ?? website.name,
-      brandVoice: body.brandVoice ?? website.brandVoice,
-      targetAudience: body.targetAudience ?? website.targetAudience,
     },
   });
   return NextResponse.json({ website: updated });

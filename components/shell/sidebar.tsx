@@ -29,7 +29,7 @@ export function Sidebar() {
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/15 text-primary">
           <Sparkles className="h-4 w-4" />
         </div>
-        <span className="font-mono-ui text-sm font-semibold tracking-tight">SignalForge</span>
+        <span className="font-mono-ui text-sm font-semibold tracking-tight">AutoPost AI</span>
       </div>
       <nav className="flex flex-1 flex-col gap-1">
         {NAV_ITEMS.map((item) => {

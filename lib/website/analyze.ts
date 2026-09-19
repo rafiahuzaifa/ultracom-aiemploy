@@ -6,12 +6,14 @@ export interface WebsiteAnalysis {
   products: string[];
   targetAudience: string;
   brandVoice: string;
+  uniqueSellingPoints: string[];
   summary: string;
 }
 
 const ANALYSIS_SYSTEM_PROMPT = `You are a brand strategist. Given raw text scraped from a
-company's website, infer their niche, core products/services, likely target audience, and
-brand voice (tone, vocabulary, personality). Be specific and avoid generic filler.`;
+company's website, infer their niche, core products/services, likely target audience,
+brand voice (tone, vocabulary, personality), and unique selling points (what makes this
+brand distinct from competitors). Be specific and avoid generic filler.`;
 
 const ANALYSIS_SCHEMA = {
   type: "object",
@@ -20,9 +22,10 @@ const ANALYSIS_SCHEMA = {
     products: { type: "array", items: { type: "string" } },
     targetAudience: { type: "string" },
     brandVoice: { type: "string" },
+    uniqueSellingPoints: { type: "array", items: { type: "string" } },
     summary: { type: "string" },
   },
-  required: ["niche", "products", "targetAudience", "brandVoice", "summary"],
+  required: ["niche", "products", "targetAudience", "brandVoice", "uniqueSellingPoints", "summary"],
 };
 
 /** Fetches and extracts readable text from a URL using Firecrawl if configured,
@@ -47,7 +50,7 @@ async function scrapeWebsiteText(url: string): Promise<string> {
   }
 
   const res = await fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (compatible; SignalForgeBot/1.0)" },
+    headers: { "User-Agent": "Mozilla/5.0 (compatible; AutoPostAIBot/1.0)" },
   });
   if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
   const html = await res.text();

@@ -1,6 +1,8 @@
+import { Prisma } from "@prisma/client";
 import { inngest } from "@/lib/inngest/client";
 import { prisma } from "@/lib/db";
 import { buildBrandContext, runContentPhase, runImagePhase, runResearchPhase } from "@/lib/agent/workflow";
+import type { ContentPostType } from "@/lib/ai/types";
 
 export const regeneratePost = inngest.createFunction(
   { id: "regenerate-post", retries: 2 },
@@ -17,28 +19,46 @@ export const regeneratePost = inngest.createFunction(
     );
 
     const research = await step.run("market-research", () => runResearchPhase(brand));
-    const content = await step.run("generate-content", () => runContentPhase(brand, research, 1));
-    const draft = content.posts[0];
+    const draft = await step.run("generate-content", () =>
+      runContentPhase({
+        brand,
+        research,
+        postType: existing.postType as ContentPostType,
+        theme: existing.theme ?? undefined,
+      })
+    );
 
-    const imageUrl = await step.run("generate-image", () => runImagePhase(draft.imagePrompt));
+    const { coverImageUrl, slideImages } = await step.run("generate-image", () => runImagePhase(draft));
 
-    const updated = await step.run("update-post", () =>
-      prisma.generatedPost.update({
+    const updated = await step.run("update-post", async () => {
+      await prisma.postMedia.deleteMany({ where: { postId } });
+      return prisma.generatedPost.update({
         where: { id: postId },
         data: {
           status: "PENDING_APPROVAL",
           theme: draft.theme,
           imagePrompt: draft.imagePrompt,
-          imageUrl,
+          imageUrl: coverImageUrl,
           researchSummary: research.summary,
-          facebookCaption: draft.facebookCaption,
-          instagramCaption: draft.instagramCaption,
-          linkedinCaption: draft.linkedinCaption,
+          captions: draft.captions as unknown as object,
+          reelScript: draft.reelScript ? (draft.reelScript as unknown as object) : Prisma.JsonNull,
           hashtags: draft.hashtags,
           rejectionReason: null,
+          media:
+            draft.postType === "CAROUSEL" && draft.slides
+              ? {
+                  create: draft.slides.map((slide, index) => ({
+                    order: slide.order ?? index,
+                    imageUrl: slideImages[index],
+                    imagePrompt: slide.imagePrompt,
+                    caption: slide.caption as unknown as object,
+                  })),
+                }
+              : undefined,
         },
-      })
-    );
+        include: { media: { orderBy: { order: "asc" } } },
+      });
+    });
 
     return { postId: updated.id };
   }

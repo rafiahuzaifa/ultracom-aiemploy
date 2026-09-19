@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Inbox } from "lucide-react";
-import type { GeneratedPost, Website } from "@prisma/client";
+import type { GeneratedPost, PostMedia, Website } from "@prisma/client";
 import { PostCard } from "@/components/dashboard/post-card";
 import { Skeleton } from "@/components/ui/skeleton";
 
+type PostWithMedia = GeneratedPost & { media: PostMedia[] };
+
 export function Dashboard() {
-  const [posts, setPosts] = useState<GeneratedPost[] | null>(null);
+  const [posts, setPosts] = useState<PostWithMedia[] | null>(null);
   const [website, setWebsite] = useState<Website | null>(null);
 
   const load = useCallback(async () => {

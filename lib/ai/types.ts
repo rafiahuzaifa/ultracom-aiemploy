@@ -1,9 +1,46 @@
+export type LanguagePreference = "EN" | "UR" | "BOTH";
+export type ContentPostType = "IMAGE" | "CAROUSEL" | "REEL";
+
+/** A piece of text in one or both supported languages, depending on brand language preference. */
+export interface Localized {
+  en?: string;
+  ur?: string;
+}
+
+export interface CaptionSet {
+  facebook: Localized;
+  instagram: Localized;
+  linkedin: Localized;
+}
+
+export interface ReelScene {
+  description: string;
+  visual: string;
+  durationSeconds: number;
+}
+
+export interface ReelScript {
+  hook: string;
+  fullScript: string;
+  scenes: ReelScene[];
+}
+
+export interface CarouselSlideDraft {
+  order: number;
+  imagePrompt: string;
+  caption: Localized;
+}
+
 export interface BrandContext {
   websiteUrl?: string;
   niche?: string;
   products?: string[];
   targetAudience?: string;
   brandVoice?: string;
+  tone?: string;
+  uniqueSellingPoints?: string[];
+  languagePreference?: LanguagePreference;
+  contentTypes?: ContentPostType[];
   dos?: string;
   donts?: string;
 }
@@ -15,13 +52,18 @@ export interface ResearchResult {
   competitorInsights?: string[];
 }
 
+/** One generated post concept, shape varies by postType. */
 export interface GeneratedPostDraft {
+  postType: ContentPostType;
   theme: string;
-  imagePrompt: string;
   hashtags: string[];
-  facebookCaption: string;
-  instagramCaption: string;
-  linkedinCaption: string;
+  captions: CaptionSet;
+  /** IMAGE: the single creative. CAROUSEL/REEL: cover/thumbnail image prompt. */
+  imagePrompt: string;
+  /** CAROUSEL only. */
+  slides?: CarouselSlideDraft[];
+  /** REEL only. */
+  reelScript?: ReelScript;
 }
 
 export interface GeneratedContentResult {

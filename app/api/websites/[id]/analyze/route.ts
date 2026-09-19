@@ -18,12 +18,34 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
       data: {
         niche: analysis.niche,
         products: analysis.products,
-        targetAudience: analysis.targetAudience,
-        brandVoice: analysis.brandVoice,
         analysis: analysis as unknown as object,
         analyzedAt: new Date(),
       },
     });
+
+    // Seed the brand profile from analysis, but never overwrite fields the
+    // user has already customized — analysis only fills in blanks.
+    const existingProfile = await prisma.brandProfile.findUnique({ where: { userId } });
+    await prisma.brandProfile.upsert({
+      where: { userId },
+      update: {
+        websiteId: existingProfile?.websiteId ?? id,
+        targetAudience: existingProfile?.targetAudience || analysis.targetAudience,
+        brandVoice: existingProfile?.brandVoice || analysis.brandVoice,
+        uniqueSellingPoints:
+          existingProfile?.uniqueSellingPoints && existingProfile.uniqueSellingPoints.length > 0
+            ? existingProfile.uniqueSellingPoints
+            : analysis.uniqueSellingPoints,
+      },
+      create: {
+        userId,
+        websiteId: id,
+        targetAudience: analysis.targetAudience,
+        brandVoice: analysis.brandVoice,
+        uniqueSellingPoints: analysis.uniqueSellingPoints,
+      },
+    });
+
     return NextResponse.json({ website: updated });
   } catch (error) {
     return NextResponse.json(

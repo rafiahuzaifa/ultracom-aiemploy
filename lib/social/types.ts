@@ -8,6 +8,14 @@ export interface PublishInput {
   metadata?: Record<string, unknown> | null;
 }
 
+export interface CarouselPublishInput {
+  imageUrls: string[];
+  caption: string;
+  accessToken: string;
+  accountId: string;
+  metadata?: Record<string, unknown> | null;
+}
+
 export interface PublishResult {
   platform: Platform;
   success: boolean;

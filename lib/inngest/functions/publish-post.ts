@@ -2,7 +2,7 @@ import { inngest } from "@/lib/inngest/client";
 import { prisma } from "@/lib/db";
 import { publishPostToPlatforms } from "@/lib/social/publish";
 import { notifyUser } from "@/lib/notify";
-import type { GeneratedPost, SocialAccount } from "@prisma/client";
+import type { GeneratedPost, PostMedia, SocialAccount } from "@prisma/client";
 
 export const publishPost = inngest.createFunction(
   { id: "publish-post", retries: 3 },
@@ -11,7 +11,10 @@ export const publishPost = inngest.createFunction(
     const { postId } = event.data;
 
     const post = await step.run("load-post", () =>
-      prisma.generatedPost.findUniqueOrThrow({ where: { id: postId } })
+      prisma.generatedPost.findUniqueOrThrow({
+        where: { id: postId },
+        include: { media: { orderBy: { order: "asc" } } },
+      })
     );
 
     await step.run("mark-publishing", () =>
@@ -27,7 +30,7 @@ export const publishPost = inngest.createFunction(
     // publish logic never reads date fields, so the cast back is safe.
     const results = await step.run("publish-to-platforms", () =>
       publishPostToPlatforms({
-        post: post as unknown as GeneratedPost,
+        post: post as unknown as GeneratedPost & { media: PostMedia[] },
         accounts: accounts as unknown as SocialAccount[],
       })
     );

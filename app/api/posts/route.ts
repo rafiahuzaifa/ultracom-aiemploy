@@ -14,6 +14,7 @@ export async function GET(request: Request) {
     where: { userId, ...(status ? { status } : {}) },
     orderBy: { createdAt: "desc" },
     take: 50,
+    include: { media: { orderBy: { order: "asc" } } },
   });
 
   return NextResponse.json({ posts });

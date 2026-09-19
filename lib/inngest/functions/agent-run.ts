@@ -4,6 +4,7 @@ import { notifyUser } from "@/lib/notify";
 import {
   buildBrandContext,
   persistGeneratedPost,
+  pickPostTypesForRun,
   runContentPhase,
   runImagePhase,
   runResearchPhase,
@@ -34,15 +35,18 @@ export const agentRun = inngest.createFunction(
       const research = await step.run("market-research", () => runResearchPhase(brand));
 
       const postCount = settings?.postsPerRun ?? 2;
-      const content = await step.run("generate-content", () =>
-        runContentPhase(brand, research, postCount)
-      );
+      const postTypes = pickPostTypesForRun(brand.contentTypes, postCount);
 
       const createdPosts = [];
-      for (const [index, draft] of content.posts.entries()) {
-        const imageUrl = await step.run(`generate-image-${index}`, () =>
-          runImagePhase(draft.imagePrompt)
+      for (const [index, postType] of postTypes.entries()) {
+        const draft = await step.run(`generate-content-${index}`, () =>
+          runContentPhase({ brand, research, postType })
         );
+
+        const { coverImageUrl, slideImages } = await step.run(`generate-image-${index}`, () =>
+          runImagePhase(draft)
+        );
+
         const post = await step.run(`persist-post-${index}`, () =>
           persistGeneratedPost({
             userId,
@@ -50,7 +54,8 @@ export const agentRun = inngest.createFunction(
             agentRunId: agentRunRecord.id,
             researchSummary: research.summary,
             draft,
-            imageUrl,
+            coverImageUrl,
+            slideImages,
             autoApprove: settings?.autoApprove ?? false,
           })
         );
@@ -66,7 +71,7 @@ export const agentRun = inngest.createFunction(
             postsGenerated: createdPosts.length,
             steps: [
               { step: "research", at: new Date().toISOString(), detail: research.summary },
-              { step: "content", at: new Date().toISOString(), detail: `${createdPosts.length} posts drafted` },
+              { step: "content", at: new Date().toISOString(), detail: `${createdPosts.length} posts drafted (${postTypes.join(", ")})` },
               { step: "completed", at: new Date().toISOString() },
             ],
           },
@@ -84,7 +89,7 @@ export const agentRun = inngest.createFunction(
         await step.run("notify-user", () =>
           notifyUser({
             userId,
-            title: `${createdPosts.length} new ad post${createdPosts.length > 1 ? "s" : ""} ready for review`,
+            title: `${createdPosts.length} new post${createdPosts.length > 1 ? "s" : ""} ready for review`,
             body: research.summary,
             href: "/",
           })

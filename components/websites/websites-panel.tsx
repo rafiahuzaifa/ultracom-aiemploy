@@ -124,14 +124,16 @@ export function WebsitesPanel() {
                 {site.analyzedAt ? (
                   <div className="grid gap-2 text-sm md:grid-cols-2">
                     <p><span className="text-muted-foreground">Niche: </span>{site.niche}</p>
-                    <p><span className="text-muted-foreground">Audience: </span>{site.targetAudience}</p>
-                    <p className="md:col-span-2"><span className="text-muted-foreground">Brand voice: </span>{site.brandVoice}</p>
                     {Array.isArray(site.products) && site.products.length > 0 && (
                       <p className="md:col-span-2">
                         <span className="text-muted-foreground">Products: </span>
                         {(site.products as string[]).join(", ")}
                       </p>
                     )}
+                    <p className="md:col-span-2 text-xs text-muted-foreground">
+                      Target audience, brand voice, and USPs are managed on the{" "}
+                      <a href="/settings" className="underline">Settings</a> page (analysis pre-fills them once).
+                    </p>
                   </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Not analyzed yet.</p>

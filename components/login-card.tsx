@@ -12,9 +12,9 @@ export function LoginCard() {
         <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/15 text-primary">
           <Sparkles className="h-6 w-6" />
         </div>
-        <CardTitle className="text-xl">SignalForge</CardTitle>
+        <CardTitle className="text-xl">AutoPost AI</CardTitle>
         <CardDescription>
-          Your autonomous AI marketing agent — research, create, approve, publish.
+          Your autonomous AI marketing agent — research, create, approve, publish. English &amp; Urdu.
         </CardDescription>
       </CardHeader>
       <CardContent>
