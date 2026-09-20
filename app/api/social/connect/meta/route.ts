@@ -4,14 +4,12 @@ import { prisma } from "@/lib/db";
 import { createOAuthState } from "@/lib/social/oauth-state";
 import { getIntegrationSettings } from "@/lib/integrations";
 
-const SCOPES = [
-  "pages_show_list",
-  "pages_read_engagement",
-  "pages_manage_posts",
-  "instagram_basic",
-  "instagram_content_publish",
-  "business_management",
-].join(",");
+// Instagram is connected separately via /api/social/connect/instagram
+// ("Instagram API with Instagram Login"), so no Instagram scopes are
+// requested here — this flow only ever needs Facebook Page access.
+const SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "business_management"].join(
+  ","
+);
 
 export async function GET(request: Request) {
   const session = await auth();
