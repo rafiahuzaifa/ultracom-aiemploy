@@ -86,14 +86,14 @@ export async function GET(request: Request) {
     }
 
     const response = NextResponse.redirect(
-      new URL(`/accounts?brandId=${brandId}&connected=meta`, appUrl)
+      new URL(`/brands?brandId=${brandId}&connected=meta`, appUrl)
     );
     response.cookies.delete("meta_oauth_state");
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : "unknown_error";
     return NextResponse.redirect(
-      new URL(`/accounts?brandId=${brandId}&error=${encodeURIComponent(message)}`, appUrl)
+      new URL(`/brands?brandId=${brandId}&error=${encodeURIComponent(message)}`, appUrl)
     );
   }
 }

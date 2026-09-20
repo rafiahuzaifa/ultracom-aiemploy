@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { BackLink } from "@/components/shell/back-link";
 import type { AgentSettings, BrandProfile, Language, PostType } from "@prisma/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +29,7 @@ const CONTENT_TYPE_OPTIONS: { value: PostType; label: string }[] = [
 ];
 
 export function SettingsPanel() {
+  const router = useRouter();
   const { currentBrand, currentBrandId } = useBrand();
   const [settings, setSettings] = useState<AgentSettings | null>(null);
   const [profile, setProfile] = useState<BrandProfile | null>(null);
@@ -94,6 +97,7 @@ export function SettingsPanel() {
       ]);
       if (!settingsRes.ok || !profileRes.ok) throw new Error();
       toast.success("Settings saved.");
+      router.push("/");
     } catch {
       toast.error("Couldn't save settings.");
     } finally {
@@ -113,6 +117,7 @@ export function SettingsPanel() {
 
   return (
     <div className="max-w-2xl space-y-6">
+      <BackLink />
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Settings — {currentBrand.name}</h1>
         <p className="text-sm text-muted-foreground">

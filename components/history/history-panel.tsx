@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select";
 import { formatRelativeTime } from "@/lib/utils";
 import { useBrand } from "@/components/providers/brand-provider";
+import { BackLink } from "@/components/shell/back-link";
 
 const RUN_STATUS_VARIANT: Record<string, "success" | "destructive" | "secondary"> = {
   COMPLETED: "success",
@@ -52,6 +53,7 @@ export function HistoryPanel() {
 
   return (
     <div className="space-y-6">
+      <BackLink />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">History</h1>

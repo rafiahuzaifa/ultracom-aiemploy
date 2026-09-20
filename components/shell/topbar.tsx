@@ -1,8 +1,22 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { signOut, useSession } from "next-auth/react";
-import { Bell, ChevronDown, Loader2, LogOut, Play } from "lucide-react";
+import {
+  Bell,
+  Building2,
+  ChevronDown,
+  History,
+  LayoutGrid,
+  Loader2,
+  LogOut,
+  Menu,
+  Play,
+  Settings,
+  Share2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,7 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { formatRelativeTime } from "@/lib/utils";
+import { formatRelativeTime, cn } from "@/lib/utils";
 import { useBrand } from "@/components/providers/brand-provider";
 
 interface NotificationItem {
@@ -24,6 +38,45 @@ interface NotificationItem {
   href: string | null;
   readAt: string | null;
   createdAt: string;
+}
+
+const MOBILE_NAV_ITEMS = [
+  { href: "/" as const, label: "Approvals", icon: LayoutGrid },
+  { href: "/brands" as const, label: "Brands", icon: Building2 },
+  { href: "/accounts" as const, label: "Accounts", icon: Share2 },
+  { href: "/history" as const, label: "History", icon: History },
+  { href: "/settings" as const, label: "Settings", icon: Settings },
+];
+
+function MobileNav() {
+  const pathname = usePathname();
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="md:hidden">
+          <Menu className="h-5 w-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="w-56">
+        <DropdownMenuLabel>AutoPost AI</DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        {MOBILE_NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          const active = pathname === item.href;
+          return (
+            <DropdownMenuItem key={item.href} asChild>
+              <Link
+                href={item.href}
+                className={cn("flex items-center gap-2", active && "text-primary")}
+              >
+                <Icon className="h-4 w-4" /> {item.label}
+              </Link>
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 }
 
 export function Topbar() {
@@ -70,16 +123,19 @@ export function Topbar() {
   const initials = session?.user?.name?.slice(0, 2).toUpperCase() ?? "AI";
 
   return (
-    <header className="flex h-16 items-center justify-between border-b border-line/60 bg-panel/40 px-6">
-      <div className="font-mono-ui text-xs uppercase tracking-widest text-muted-foreground">
-        {currentBrand ? currentBrand.name : "Marketing Agent"}
+    <header className="flex h-16 items-center justify-between border-b border-line/60 bg-panel/40 px-4 md:px-6">
+      <div className="flex items-center gap-2">
+        <MobileNav />
+        <div className="font-mono-ui text-xs uppercase tracking-widest text-muted-foreground">
+          {currentBrand ? currentBrand.name : "Marketing Agent"}
+        </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2 md:gap-3">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm" disabled={triggering || !currentBrand}>
               {triggering ? <Loader2 className="h-4 w-4 animate-spin" /> : <Play className="h-4 w-4" />}
-              Run agent
+              <span className="hidden sm:inline">Run agent</span>
               <ChevronDown className="h-3.5 w-3.5" />
             </Button>
           </DropdownMenuTrigger>
