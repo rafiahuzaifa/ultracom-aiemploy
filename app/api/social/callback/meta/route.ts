@@ -16,6 +16,19 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+
+  const fbError = searchParams.get("error");
+  const fbErrorReason = searchParams.get("error_reason");
+  const fbErrorDescription = searchParams.get("error_description");
+  if (fbError) {
+    return NextResponse.redirect(
+      new URL(
+        `/accounts?error=${encodeURIComponent(`fb_${fbError}: ${fbErrorReason ?? ""} ${fbErrorDescription ?? ""}`)}`,
+        appUrl
+      )
+    );
+  }
+
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const { nonce: cookieNonce, brandId } = parseOAuthStateCookie(
@@ -23,8 +36,22 @@ export async function GET(request: Request) {
     "meta_oauth_state"
   );
 
-  if (!code || !state || !brandId || state !== cookieNonce) {
-    return NextResponse.redirect(new URL("/accounts?error=meta_oauth_state", appUrl));
+  // Temporarily granular (same approach that found the Instagram bug) to
+  // pinpoint which condition is actually failing.
+  if (!code) {
+    return NextResponse.redirect(new URL("/accounts?error=fb_missing_code", appUrl));
+  }
+  if (!state) {
+    return NextResponse.redirect(new URL("/accounts?error=fb_missing_state_param", appUrl));
+  }
+  if (!cookieNonce) {
+    return NextResponse.redirect(new URL("/accounts?error=fb_missing_cookie", appUrl));
+  }
+  if (!brandId) {
+    return NextResponse.redirect(new URL("/accounts?error=fb_missing_brandid_in_cookie", appUrl));
+  }
+  if (state !== cookieNonce) {
+    return NextResponse.redirect(new URL("/accounts?error=fb_state_mismatch", appUrl));
   }
 
   const brand = await prisma.brand.findFirst({ where: { id: brandId, userId: session.user.id } });
