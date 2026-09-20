@@ -12,6 +12,7 @@ export interface ResolvedIntegrationSettings {
   firecrawlApiKey?: string;
   metaAppId?: string;
   metaAppSecret?: string;
+  metaConfigId?: string;
   instagramAppId?: string;
   instagramAppSecret?: string;
   linkedinClientId?: string;
@@ -50,6 +51,7 @@ export async function getIntegrationSettings(userId: string): Promise<ResolvedIn
     firecrawlApiKey: tryDecrypt(row?.firecrawlApiKey) || process.env.FIRECRAWL_API_KEY,
     metaAppId: row?.metaAppId || process.env.META_APP_ID,
     metaAppSecret: tryDecrypt(row?.metaAppSecret) || process.env.META_APP_SECRET,
+    metaConfigId: row?.metaConfigId || process.env.META_CONFIG_ID,
     instagramAppId: row?.instagramAppId || process.env.INSTAGRAM_APP_ID,
     instagramAppSecret: tryDecrypt(row?.instagramAppSecret) || process.env.INSTAGRAM_APP_SECRET,
     linkedinClientId: row?.linkedinClientId || process.env.LINKEDIN_CLIENT_ID,
@@ -67,6 +69,7 @@ export async function getIntegrationStatus(userId: string) {
     geminiImageModel: settings.geminiImageModel,
     openaiTextModel: settings.openaiTextModel,
     metaAppId: settings.metaAppId ?? "",
+    metaConfigId: settings.metaConfigId ?? "",
     instagramAppId: settings.instagramAppId ?? "",
     linkedinClientId: settings.linkedinClientId ?? "",
     hasGeminiApiKey: Boolean(settings.geminiApiKey),
@@ -94,6 +97,7 @@ const PLAIN_FIELDS = [
   "geminiImageModel",
   "openaiTextModel",
   "metaAppId",
+  "metaConfigId",
   "instagramAppId",
   "linkedinClientId",
 ] as const;

@@ -87,6 +87,9 @@ model IntegrationSettings {
   firecrawlApiKey      String?  @db.Text
   metaAppId            String?
   metaAppSecret        String?  @db.Text
+  // Facebook Login for Business apps authenticate via a saved
+  // "Configuration" rather than a raw OAuth scope list.
+  metaConfigId         String?
   // "Instagram API with Instagram Login" — Meta's current Instagram
   // integration path, with its own app credentials separate from the
   // Facebook App ID/Secret above (which are only used for Facebook Pages).

@@ -9,10 +9,6 @@ import { getIntegrationSettings } from "@/lib/integrations";
 // requested here — this flow only ever needs Facebook Page access.
 export const dynamic = "force-dynamic";
 
-const SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "business_management"].join(
-  ","
-);
-
 export async function GET(request: Request) {
   const session = await auth();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";
@@ -35,6 +31,11 @@ export async function GET(request: Request) {
       new URL(`/brands?brandId=${brandId}&error=meta_not_configured`, appUrl)
     );
   }
+  if (!settings.metaConfigId) {
+    return NextResponse.redirect(
+      new URL(`/brands?brandId=${brandId}&error=meta_config_not_configured`, appUrl)
+    );
+  }
 
   const nonce = createOAuthState();
   const redirectUri = `${appUrl}/api/social/callback/meta`;
@@ -42,8 +43,13 @@ export async function GET(request: Request) {
   authUrl.searchParams.set("client_id", settings.metaAppId);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", nonce);
-  authUrl.searchParams.set("scope", SCOPES);
+  // Facebook Login for Business apps authenticate against a saved
+  // "Configuration" (created in App Dashboard > Facebook Login for
+  // Business > Configurations) instead of a raw scope list — the
+  // configuration itself defines which permissions are requested.
+  authUrl.searchParams.set("config_id", settings.metaConfigId);
   authUrl.searchParams.set("response_type", "code");
+  authUrl.searchParams.set("override_default_response_type", "true");
 
   const response = NextResponse.redirect(authUrl);
   // Cookie carries both the CSRF nonce and which brand this connection is

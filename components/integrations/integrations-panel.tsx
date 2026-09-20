@@ -24,6 +24,7 @@ interface IntegrationStatus {
   geminiImageModel: string;
   openaiTextModel: string;
   metaAppId: string;
+  metaConfigId: string;
   instagramAppId: string;
   linkedinClientId: string;
   hasGeminiApiKey: boolean;
@@ -45,6 +46,7 @@ export function IntegrationsPanel() {
   const [geminiImageModel, setGeminiImageModel] = useState("");
   const [openaiTextModel, setOpenaiTextModel] = useState("");
   const [metaAppId, setMetaAppId] = useState("");
+  const [metaConfigId, setMetaConfigId] = useState("");
   const [instagramAppId, setInstagramAppId] = useState("");
   const [linkedinClientId, setLinkedinClientId] = useState("");
 
@@ -68,6 +70,7 @@ export function IntegrationsPanel() {
         setGeminiImageModel(d.status.geminiImageModel);
         setOpenaiTextModel(d.status.openaiTextModel);
         setMetaAppId(d.status.metaAppId);
+        setMetaConfigId(d.status.metaConfigId);
         setInstagramAppId(d.status.instagramAppId);
         setLinkedinClientId(d.status.linkedinClientId);
       });
@@ -83,6 +86,7 @@ export function IntegrationsPanel() {
         geminiImageModel,
         openaiTextModel,
         metaAppId,
+        metaConfigId,
         instagramAppId,
         linkedinClientId,
       };
@@ -225,6 +229,19 @@ export function IntegrationsPanel() {
             value={metaAppSecret}
             onChange={setMetaAppSecret}
           />
+          <div>
+            <Label>Login Configuration ID</Label>
+            <Input
+              value={metaConfigId}
+              onChange={(e) => setMetaConfigId(e.target.value)}
+              placeholder="Not set"
+            />
+            <p className="mt-1 text-xs text-muted-foreground">
+              From App Dashboard → Facebook Login for Business → Configurations. Required for
+              Business-type Meta apps — without it, Facebook rejects the connection with an
+              &quot;Invalid Scopes&quot; error.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
