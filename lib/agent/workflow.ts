@@ -3,12 +3,14 @@ import { runMarketResearch } from "@/lib/ai/research";
 import { generateAdPost } from "@/lib/ai/generate-content";
 import { generateAdImage } from "@/lib/ai/generate-image";
 import type { BrandContext, ContentPostType, GeneratedPostDraft } from "@/lib/ai/types";
+import { getIntegrationSettings, type ResolvedIntegrationSettings } from "@/lib/integrations";
 
 export async function buildBrandContext(brandId: string) {
   const brand = await prisma.brand.findUniqueOrThrow({ where: { id: brandId } });
-  const [profile, settings] = await Promise.all([
+  const [profile, settings, integrations] = await Promise.all([
     prisma.brandProfile.findUnique({ where: { brandId } }),
     prisma.agentSettings.findUnique({ where: { brandId } }),
+    getIntegrationSettings(brand.userId),
   ]);
 
   const analysis = (brand.analysis ?? {}) as Record<string, unknown>;
@@ -27,11 +29,11 @@ export async function buildBrandContext(brandId: string) {
     donts: profile?.donts ?? undefined,
   };
 
-  return { brand, context, settings, profile };
+  return { brand, context, settings, profile, integrations };
 }
 
-export async function runResearchPhase(brand: BrandContext) {
-  return runMarketResearch(brand);
+export async function runResearchPhase(brand: BrandContext, integrations: ResolvedIntegrationSettings) {
+  return runMarketResearch(brand, integrations);
 }
 
 /** Cycles through the brand's preferred content types so a multi-post run gets variety. */
@@ -48,20 +50,21 @@ export async function runContentPhase(args: {
   research: Awaited<ReturnType<typeof runResearchPhase>>;
   postType: ContentPostType;
   theme?: string;
+  settings: ResolvedIntegrationSettings;
 }) {
   return generateAdPost(args);
 }
 
 /** Generates the image(s) a draft needs: one cover for IMAGE/REEL, one per slide for CAROUSEL. */
-export async function runImagePhase(draft: GeneratedPostDraft) {
+export async function runImagePhase(draft: GeneratedPostDraft, settings: ResolvedIntegrationSettings) {
   if (draft.postType === "CAROUSEL" && draft.slides) {
     const slideImages = await Promise.all(
-      draft.slides.map((slide) => generateAdImage(slide.imagePrompt))
+      draft.slides.map((slide) => generateAdImage(slide.imagePrompt, settings))
     );
     const coverImageUrl = slideImages[0];
     return { coverImageUrl, slideImages };
   }
-  const coverImageUrl = await generateAdImage(draft.imagePrompt);
+  const coverImageUrl = await generateAdImage(draft.imagePrompt, settings);
   return { coverImageUrl, slideImages: [] as string[] };
 }
 

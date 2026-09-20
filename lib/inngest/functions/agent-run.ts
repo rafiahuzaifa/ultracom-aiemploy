@@ -16,7 +16,7 @@ export const agentRun = inngest.createFunction(
   async ({ event, step }) => {
     const { brandId, trigger } = event.data;
 
-    const { brand, context, settings } = await step.run("load-context", () =>
+    const { brand, context, settings, integrations } = await step.run("load-context", () =>
       buildBrandContext(brandId)
     );
 
@@ -34,7 +34,7 @@ export const agentRun = inngest.createFunction(
       // Research and content generation only ever see THIS brand's context
       // (niche, voice, audience, USPs) — nothing here is shared or cached
       // across brands, so output for brand A can never bleed into brand B.
-      const research = await step.run("market-research", () => runResearchPhase(context));
+      const research = await step.run("market-research", () => runResearchPhase(context, integrations));
 
       const postCount = settings?.postsPerRun ?? 2;
       const postTypes = pickPostTypesForRun(context.contentTypes, postCount);
@@ -42,11 +42,11 @@ export const agentRun = inngest.createFunction(
       const createdPosts = [];
       for (const [index, postType] of postTypes.entries()) {
         const draft = await step.run(`generate-content-${index}`, () =>
-          runContentPhase({ brand: context, research, postType })
+          runContentPhase({ brand: context, research, postType, settings: integrations })
         );
 
         const { coverImageUrl, slideImages } = await step.run(`generate-image-${index}`, () =>
-          runImagePhase(draft)
+          runImagePhase(draft, integrations)
         );
 
         const post = await step.run(`persist-post-${index}`, () =>

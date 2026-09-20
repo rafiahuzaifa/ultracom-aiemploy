@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
 import { listFacebookPages } from "@/lib/social/facebook";
+import { getIntegrationSettings } from "@/lib/integrations";
 
 const GRAPH_VERSION = "v21.0";
 
@@ -33,10 +34,11 @@ export async function GET(request: Request) {
   }
 
   try {
+    const settings = await getIntegrationSettings(session.user.id);
     const redirectUri = `${appUrl}/api/social/callback/meta`;
     const tokenParams = new URLSearchParams({
-      client_id: process.env.META_APP_ID ?? "",
-      client_secret: process.env.META_APP_SECRET ?? "",
+      client_id: settings.metaAppId ?? "",
+      client_secret: settings.metaAppSecret ?? "",
       redirect_uri: redirectUri,
       code,
     });

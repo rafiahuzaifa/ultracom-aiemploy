@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { getTextProvider } from "@/lib/ai";
+import type { ResolvedIntegrationSettings } from "@/lib/integrations";
 
 export interface WebsiteAnalysis {
   niche: string;
@@ -30,9 +31,7 @@ const ANALYSIS_SCHEMA = {
 
 /** Fetches and extracts readable text from a URL using Firecrawl if configured,
  *  falling back to a direct fetch + cheerio text extraction otherwise. */
-async function scrapeWebsiteText(url: string): Promise<string> {
-  const firecrawlKey = process.env.FIRECRAWL_API_KEY;
-
+async function scrapeWebsiteText(url: string, firecrawlKey: string | undefined): Promise<string> {
   if (firecrawlKey) {
     const res = await fetch("https://api.firecrawl.dev/v1/scrape", {
       method: "POST",
@@ -63,9 +62,12 @@ async function scrapeWebsiteText(url: string): Promise<string> {
 }
 
 /** Scrapes a brand's website and infers its niche, products, voice, audience, and USPs. */
-export async function analyzeWebsite(url: string): Promise<WebsiteAnalysis> {
-  const text = await scrapeWebsiteText(url);
-  const provider = getTextProvider();
+export async function analyzeWebsite(
+  url: string,
+  settings: ResolvedIntegrationSettings
+): Promise<WebsiteAnalysis> {
+  const text = await scrapeWebsiteText(url, settings.firecrawlApiKey);
+  const provider = getTextProvider(settings);
   return provider.generateJSON<WebsiteAnalysis>({
     system: ANALYSIS_SYSTEM_PROMPT,
     prompt: `Website URL: ${url}\n\nScraped content:\n${text}\n\nRespond ONLY with JSON matching the provided schema.`,

@@ -9,6 +9,7 @@ import {
   Building2,
   ChevronDown,
   History,
+  KeyRound,
   LayoutGrid,
   Loader2,
   LogOut,
@@ -46,6 +47,7 @@ const MOBILE_NAV_ITEMS = [
   { href: "/accounts" as const, label: "Accounts", icon: Share2 },
   { href: "/history" as const, label: "History", icon: History },
   { href: "/settings" as const, label: "Settings", icon: Settings },
+  { href: "/integrations" as const, label: "Integrations", icon: KeyRound },
 ];
 
 function MobileNav() {

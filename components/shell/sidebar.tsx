@@ -9,6 +9,7 @@ import {
   History,
   Settings,
   Sparkles,
+  KeyRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BrandSwitcher } from "@/components/brands/brand-switcher";
@@ -19,6 +20,7 @@ const NAV_ITEMS = [
   { href: "/accounts" as const, label: "Accounts", icon: Share2 },
   { href: "/history" as const, label: "History", icon: History },
   { href: "/settings" as const, label: "Settings", icon: Settings },
+  { href: "/integrations" as const, label: "Integrations", icon: KeyRound },
 ];
 
 export function Sidebar() {

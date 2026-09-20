@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { analyzeWebsite } from "@/lib/brand/analyze";
 import { isErrorResponse, requireOwnedBrand, requireUserId } from "@/lib/api-helpers";
+import { getIntegrationSettings } from "@/lib/integrations";
 
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const userId = await requireUserId();
@@ -12,7 +13,8 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   if (isErrorResponse(brand)) return brand;
 
   try {
-    const analysis = await analyzeWebsite(brand.websiteUrl);
+    const settings = await getIntegrationSettings(userId);
+    const analysis = await analyzeWebsite(brand.websiteUrl, settings);
     const updated = await prisma.brand.update({
       where: { id },
       data: {

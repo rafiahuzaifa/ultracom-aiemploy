@@ -1,6 +1,7 @@
 import { getTextProvider } from "@/lib/ai";
 import { buildResearchPrompt, RESEARCH_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import type { BrandContext, ResearchResult } from "@/lib/ai/types";
+import type { ResolvedIntegrationSettings } from "@/lib/integrations";
 
 const RESEARCH_SCHEMA = {
   type: "object",
@@ -13,8 +14,11 @@ const RESEARCH_SCHEMA = {
   required: ["summary", "trendingTopics", "contentAngles"],
 };
 
-export async function runMarketResearch(brand: BrandContext): Promise<ResearchResult> {
-  const provider = getTextProvider();
+export async function runMarketResearch(
+  brand: BrandContext,
+  settings: ResolvedIntegrationSettings
+): Promise<ResearchResult> {
+  const provider = getTextProvider(settings);
   return provider.generateJSON<ResearchResult>({
     system: RESEARCH_SYSTEM_PROMPT,
     prompt: buildResearchPrompt(brand),

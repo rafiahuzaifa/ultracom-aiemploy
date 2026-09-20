@@ -144,6 +144,29 @@ prisma/schema.prisma      # Full data model
 - **AgentRun** — one row per agent execution for one brand, with step logs.
 - **Notification** — in-app notifications (user-level, since they surface
   across brands, e.g. "3 new posts ready — Acme Coffee Co.").
+- **IntegrationSettings** — account-wide API keys and app credentials (AI
+  provider keys, Meta App ID/Secret, LinkedIn Client ID/Secret, Firecrawl),
+  encrypted at rest and managed from the **Integrations** page instead of
+  `.env` — see below.
+
+## Managing API keys from the app (no .env edits, no redeploy)
+
+Rather than editing `.env` and redeploying every time a key changes, sign in
+and open **Integrations** in the sidebar. It covers:
+
+- AI provider selection + API keys (Gemini / OpenAI) and model names
+- Firecrawl key (optional, improves website analysis)
+- Meta App ID/Secret (one app authorizes connecting any number of brands'
+  Facebook Pages/Instagram accounts)
+- LinkedIn Client ID/Secret (same — one app per account, any number of brands)
+
+Secrets are encrypted (AES-256-GCM) before being stored and are **never**
+sent back to the browser after saving — the page only shows a "Saved"
+badge, and leaving a field blank keeps whatever's already stored. A field
+left blank with nothing saved yet falls back to the matching `.env`
+variable, so `.env` still works for anyone who prefers configuring it that
+way (e.g. as a platform operator's account-wide default before any user has
+set their own).
 
 ## Setup
 

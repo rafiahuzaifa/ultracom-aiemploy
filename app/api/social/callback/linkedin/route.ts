@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
+import { getIntegrationSettings } from "@/lib/integrations";
 
 export async function GET(request: Request) {
   const session = await auth();
@@ -30,6 +31,7 @@ export async function GET(request: Request) {
   }
 
   try {
+    const settings = await getIntegrationSettings(session.user.id);
     const redirectUri = `${appUrl}/api/social/callback/linkedin`;
     const tokenRes = await fetch("https://www.linkedin.com/oauth/v2/accessToken", {
       method: "POST",
@@ -38,8 +40,8 @@ export async function GET(request: Request) {
         grant_type: "authorization_code",
         code,
         redirect_uri: redirectUri,
-        client_id: process.env.LINKEDIN_CLIENT_ID ?? "",
-        client_secret: process.env.LINKEDIN_CLIENT_SECRET ?? "",
+        client_id: settings.linkedinClientId ?? "",
+        client_secret: settings.linkedinClientSecret ?? "",
       }),
     });
     const tokenData = await tokenRes.json();

@@ -14,19 +14,20 @@ export const regeneratePost = inngest.createFunction(
       prisma.generatedPost.findUniqueOrThrow({ where: { id: postId } })
     );
 
-    const { context } = await step.run("load-context", () => buildBrandContext(existing.brandId));
+    const { context, integrations } = await step.run("load-context", () => buildBrandContext(existing.brandId));
 
-    const research = await step.run("market-research", () => runResearchPhase(context));
+    const research = await step.run("market-research", () => runResearchPhase(context, integrations));
     const draft = await step.run("generate-content", () =>
       runContentPhase({
         brand: context,
         research,
         postType: existing.postType as ContentPostType,
         theme: existing.theme ?? undefined,
+        settings: integrations,
       })
     );
 
-    const { coverImageUrl, slideImages } = await step.run("generate-image", () => runImagePhase(draft));
+    const { coverImageUrl, slideImages } = await step.run("generate-image", () => runImagePhase(draft, integrations));
 
     const updated = await step.run("update-post", async () => {
       await prisma.postMedia.deleteMany({ where: { postId } });

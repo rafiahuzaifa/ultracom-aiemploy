@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { inngest } from "@/lib/inngest/client";
 import { isErrorResponse, requireUserId } from "@/lib/api-helpers";
 import { generateAdImage } from "@/lib/ai/generate-image";
+import { getIntegrationSettings } from "@/lib/integrations";
 
 const localizedSchema = z.object({
   en: z.string().optional(),
@@ -97,9 +98,11 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     case "regenerate-image": {
       // Re-renders the image(s) from the SAME prompt(s) already stored —
       // fast enough to run inline, unlike a full content regeneration.
+      const settings = await getIntegrationSettings(userId);
+
       if (post.postType === "CAROUSEL" && post.media.length > 0) {
         const newImages = await Promise.all(
-          post.media.map((slide) => generateAdImage(slide.imagePrompt ?? post.imagePrompt ?? ""))
+          post.media.map((slide) => generateAdImage(slide.imagePrompt ?? post.imagePrompt ?? "", settings))
         );
         await Promise.all(
           post.media.map((slide, i) =>
@@ -114,7 +117,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return NextResponse.json({ post: updated });
       }
 
-      const newImageUrl = await generateAdImage(post.imagePrompt ?? post.theme ?? "");
+      const newImageUrl = await generateAdImage(post.imagePrompt ?? post.theme ?? "", settings);
       const updated = await prisma.generatedPost.update({
         where: { id },
         data: { imageUrl: newImageUrl },

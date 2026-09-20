@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createOAuthState } from "@/lib/social/oauth-state";
+import { getIntegrationSettings } from "@/lib/integrations";
 
 const SCOPES = ["w_organization_social", "r_organization_admin", "rw_organization_admin"].join(" ");
 
@@ -21,11 +22,18 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/accounts?error=brand_not_found", appUrl));
   }
 
+  const settings = await getIntegrationSettings(session.user.id);
+  if (!settings.linkedinClientId || !settings.linkedinClientSecret) {
+    return NextResponse.redirect(
+      new URL(`/brands?brandId=${brandId}&error=linkedin_not_configured`, appUrl)
+    );
+  }
+
   const nonce = createOAuthState();
   const redirectUri = `${appUrl}/api/social/callback/linkedin`;
   const authUrl = new URL("https://www.linkedin.com/oauth/v2/authorization");
   authUrl.searchParams.set("response_type", "code");
-  authUrl.searchParams.set("client_id", process.env.LINKEDIN_CLIENT_ID ?? "");
+  authUrl.searchParams.set("client_id", settings.linkedinClientId);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", nonce);
   authUrl.searchParams.set("scope", SCOPES);

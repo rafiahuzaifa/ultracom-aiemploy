@@ -58,10 +58,40 @@ model User {
   image         String?
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
-  accounts      Account[]
-  sessions      Session[]
-  brands        Brand[]
-  notifications Notification[]
+  accounts            Account[]
+  sessions            Session[]
+  brands              Brand[]
+  notifications       Notification[]
+  integrationSettings IntegrationSettings?
+}
+
+/**
+ * Account-wide (not per-brand) integration credentials, managed from the
+ * Integrations page instead of .env — so keys can be added/rotated from
+ * the browser at any time without redeploying. Every secret field is
+ * encrypted at rest with the same AES-256-GCM helper used for social
+ * tokens (lib/encryption.ts). A blank field here falls back to the
+ * matching environment variable, so .env still works for anyone who
+ * prefers configuring it that way (e.g. a platform operator's defaults).
+ */
+model IntegrationSettings {
+  id                   String   @id @default(cuid())
+  userId               String   @unique
+  aiTextProvider       String?
+  aiImageProvider      String?
+  geminiApiKey         String?  @db.Text
+  geminiTextModel      String?
+  geminiImageModel     String?
+  openaiApiKey         String?  @db.Text
+  openaiTextModel      String?
+  firecrawlApiKey      String?  @db.Text
+  metaAppId            String?
+  metaAppSecret        String?  @db.Text
+  linkedinClientId     String?
+  linkedinClientSecret String?  @db.Text
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Language {

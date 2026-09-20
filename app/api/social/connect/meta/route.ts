@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { createOAuthState } from "@/lib/social/oauth-state";
+import { getIntegrationSettings } from "@/lib/integrations";
 
 const SCOPES = [
   "pages_show_list",
@@ -28,10 +29,17 @@ export async function GET(request: Request) {
     return NextResponse.redirect(new URL("/accounts?error=brand_not_found", appUrl));
   }
 
+  const settings = await getIntegrationSettings(session.user.id);
+  if (!settings.metaAppId || !settings.metaAppSecret) {
+    return NextResponse.redirect(
+      new URL(`/brands?brandId=${brandId}&error=meta_not_configured`, appUrl)
+    );
+  }
+
   const nonce = createOAuthState();
   const redirectUri = `${appUrl}/api/social/callback/meta`;
   const authUrl = new URL("https://www.facebook.com/v21.0/dialog/oauth");
-  authUrl.searchParams.set("client_id", process.env.META_APP_ID ?? "");
+  authUrl.searchParams.set("client_id", settings.metaAppId);
   authUrl.searchParams.set("redirect_uri", redirectUri);
   authUrl.searchParams.set("state", nonce);
   authUrl.searchParams.set("scope", SCOPES);

@@ -1,6 +1,7 @@
 import { getTextProvider } from "@/lib/ai";
 import { buildContentPrompt, CONTENT_SYSTEM_PROMPT } from "@/lib/ai/prompts";
 import type { BrandContext, ContentPostType, GeneratedPostDraft, ResearchResult } from "@/lib/ai/types";
+import type { ResolvedIntegrationSettings } from "@/lib/integrations";
 
 const LOCALIZED_SCHEMA = {
   type: "object",
@@ -83,8 +84,9 @@ export async function generateAdPost(args: {
   research: ResearchResult;
   postType: ContentPostType;
   theme?: string;
+  settings: ResolvedIntegrationSettings;
 }): Promise<GeneratedPostDraft> {
-  const provider = getTextProvider();
+  const provider = getTextProvider(args.settings);
   const raw = await provider.generateJSON<Omit<GeneratedPostDraft, "postType">>({
     system: CONTENT_SYSTEM_PROMPT,
     prompt: buildContentPrompt(args),
