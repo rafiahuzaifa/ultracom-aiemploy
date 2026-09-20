@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
+import { parseOAuthStateCookie } from "@/lib/social/oauth-state";
 import { getIntegrationSettings } from "@/lib/integrations";
 
 export async function GET(request: Request) {
@@ -14,12 +15,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
-  const cookieValue = request.headers
-    .get("cookie")
-    ?.split("; ")
-    .find((c) => c.startsWith("linkedin_oauth_state="))
-    ?.split("=")[1];
-  const [cookieNonce, brandId] = cookieValue?.split(":") ?? [];
+  const { nonce: cookieNonce, brandId } = parseOAuthStateCookie(
+    request.headers.get("cookie"),
+    "linkedin_oauth_state"
+  );
 
   if (!code || !state || !brandId || state !== cookieNonce) {
     return NextResponse.redirect(new URL("/accounts?error=linkedin_oauth_state", appUrl));

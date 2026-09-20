@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
 import { getIntegrationSettings } from "@/lib/integrations";
+import { parseOAuthStateCookie } from "@/lib/social/oauth-state";
 import {
   exchangeForLongLivedInstagramToken,
   exchangeInstagramCode,
@@ -35,30 +36,13 @@ export async function GET(request: Request) {
 
   const code = searchParams.get("code");
   const state = searchParams.get("state");
-  const cookieValue = request.headers
-    .get("cookie")
-    ?.split("; ")
-    .find((c) => c.startsWith("instagram_oauth_state="))
-    ?.split("=")[1];
-  const [cookieNonce, brandId] = cookieValue?.split(":") ?? [];
+  const { nonce: cookieNonce, brandId } = parseOAuthStateCookie(
+    request.headers.get("cookie"),
+    "instagram_oauth_state"
+  );
 
-  // Broken out into specific reasons (temporarily) since the generic
-  // combined check gave no way to tell which condition was actually
-  // failing during rollout.
-  if (!code) {
-    return NextResponse.redirect(new URL("/accounts?error=ig_missing_code", appUrl));
-  }
-  if (!state) {
-    return NextResponse.redirect(new URL("/accounts?error=ig_missing_state_param", appUrl));
-  }
-  if (!cookieValue) {
-    return NextResponse.redirect(new URL("/accounts?error=ig_missing_cookie", appUrl));
-  }
-  if (!brandId) {
-    return NextResponse.redirect(new URL("/accounts?error=ig_missing_brandid_in_cookie", appUrl));
-  }
-  if (state !== cookieNonce) {
-    return NextResponse.redirect(new URL("/accounts?error=ig_state_mismatch", appUrl));
+  if (!code || !state || !brandId || state !== cookieNonce) {
+    return NextResponse.redirect(new URL("/accounts?error=instagram_oauth_state", appUrl));
   }
 
   const brand = await prisma.brand.findFirst({ where: { id: brandId, userId: session.user.id } });

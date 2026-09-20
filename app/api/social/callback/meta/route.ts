@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/db";
 import { encrypt } from "@/lib/encryption";
 import { listFacebookPages } from "@/lib/social/facebook";
+import { parseOAuthStateCookie } from "@/lib/social/oauth-state";
 import { getIntegrationSettings } from "@/lib/integrations";
 
 const GRAPH_VERSION = "v21.0";
@@ -17,12 +18,10 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
-  const cookieValue = request.headers
-    .get("cookie")
-    ?.split("; ")
-    .find((c) => c.startsWith("meta_oauth_state="))
-    ?.split("=")[1];
-  const [cookieNonce, brandId] = cookieValue?.split(":") ?? [];
+  const { nonce: cookieNonce, brandId } = parseOAuthStateCookie(
+    request.headers.get("cookie"),
+    "meta_oauth_state"
+  );
 
   if (!code || !state || !brandId || state !== cookieNonce) {
     return NextResponse.redirect(new URL("/accounts?error=meta_oauth_state", appUrl));
