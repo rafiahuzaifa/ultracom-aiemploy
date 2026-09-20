@@ -2,9 +2,13 @@ import { put } from "@vercel/blob";
 
 /**
  * Persists a base64-encoded image to durable storage and returns a public URL.
- * Uses Vercel Blob in production; falls back to a data: URL in local dev when
- * no BLOB_READ_WRITE_TOKEN is configured, so the app still runs without cloud
- * storage set up.
+ * Uses Vercel Blob when a store is connected — either via the classic
+ * BLOB_READ_WRITE_TOKEN env var, or via BLOB_STORE_ID (Vercel's newer
+ * "Connect Store" flow, which authenticates through the platform's OIDC
+ * token at runtime instead of a static secret). Falls back to an inline
+ * data: URL in local dev when neither is configured, so the app still runs
+ * without cloud storage set up — though Facebook/Instagram publishing
+ * requires a real public URL, so this fallback only works for local testing.
  */
 export async function saveImageAndGetUrl(args: {
   base64: string;
@@ -14,7 +18,7 @@ export async function saveImageAndGetUrl(args: {
   const { base64, mimeType, filename } = args;
   const buffer = Buffer.from(base64, "base64");
 
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
+  if (process.env.BLOB_READ_WRITE_TOKEN || process.env.BLOB_STORE_ID) {
     const blob = await put(filename, buffer, {
       access: "public",
       contentType: mimeType,
