@@ -7,6 +7,8 @@ import { getIntegrationSettings } from "@/lib/integrations";
 // Instagram is connected separately via /api/social/connect/instagram
 // ("Instagram API with Instagram Login"), so no Instagram scopes are
 // requested here — this flow only ever needs Facebook Page access.
+export const dynamic = "force-dynamic";
+
 const SCOPES = ["pages_show_list", "pages_read_engagement", "pages_manage_posts", "business_management"].join(
   ","
 );

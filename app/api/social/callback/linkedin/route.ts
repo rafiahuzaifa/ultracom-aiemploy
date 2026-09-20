@@ -5,6 +5,8 @@ import { encrypt } from "@/lib/encryption";
 import { parseOAuthStateCookie } from "@/lib/social/oauth-state";
 import { getIntegrationSettings } from "@/lib/integrations";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const session = await auth();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";

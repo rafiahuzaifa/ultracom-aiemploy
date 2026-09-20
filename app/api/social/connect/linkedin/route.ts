@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { createOAuthState } from "@/lib/social/oauth-state";
 import { getIntegrationSettings } from "@/lib/integrations";
 
+export const dynamic = "force-dynamic";
+
 const SCOPES = ["w_organization_social", "r_organization_admin", "rw_organization_admin"].join(" ");
 
 export async function GET(request: Request) {

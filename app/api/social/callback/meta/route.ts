@@ -6,6 +6,8 @@ import { listFacebookPages } from "@/lib/social/facebook";
 import { parseOAuthStateCookie } from "@/lib/social/oauth-state";
 import { getIntegrationSettings } from "@/lib/integrations";
 
+export const dynamic = "force-dynamic";
+
 const GRAPH_VERSION = "v21.0";
 
 export async function GET(request: Request) {

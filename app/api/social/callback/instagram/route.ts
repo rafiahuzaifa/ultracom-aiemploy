@@ -10,6 +10,8 @@ import {
   getInstagramProfile,
 } from "@/lib/social/instagram";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(request: Request) {
   const session = await auth();
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "";

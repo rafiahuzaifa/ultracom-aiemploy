@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { createOAuthState } from "@/lib/social/oauth-state";
 import { getIntegrationSettings } from "@/lib/integrations";
 
+export const dynamic = "force-dynamic";
+
 // "Instagram API with Instagram Login" scopes for publishing content.
 const SCOPES = ["instagram_business_basic", "instagram_business_content_publish"].join(",");
 
