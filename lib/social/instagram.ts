@@ -1,7 +1,11 @@
 import type { CarouselPublishInput, PublishInput, PublishResult } from "@/lib/social/types";
 
+// "Instagram API with Instagram Login" — Meta's current Instagram
+// integration path. Publishing goes through graph.instagram.com using an
+// Instagram-scoped access token (obtained via Instagram's own OAuth
+// endpoints, not Facebook's), rather than a Facebook Page token.
 const GRAPH_VERSION = "v21.0";
-const GRAPH_BASE = `https://graph.facebook.com/${GRAPH_VERSION}`;
+const GRAPH_BASE = `https://graph.instagram.com/${GRAPH_VERSION}`;
 
 function assertPublicUrl(imageUrl: string) {
   if (imageUrl.startsWith("data:")) {
@@ -12,8 +16,8 @@ function assertPublicUrl(imageUrl: string) {
 }
 
 /**
- * Publishes an image post to an Instagram Business Account via the Meta
- * Graph API's two-step container -> publish flow.
+ * Publishes an image post to an Instagram professional account via the
+ * container -> publish flow.
  */
 export async function publishToInstagram(input: PublishInput): Promise<PublishResult> {
   try {
@@ -58,9 +62,9 @@ export async function publishToInstagram(input: PublishInput): Promise<PublishRe
 }
 
 /**
- * Publishes a carousel post to an Instagram Business Account: each image
- * becomes a child media container (is_carousel_item), then a parent
- * carousel container references all children before publishing.
+ * Publishes a carousel post: each image becomes a child media container
+ * (is_carousel_item), then a parent carousel container references all
+ * children before publishing.
  */
 export async function publishCarouselToInstagram(input: CarouselPublishInput): Promise<PublishResult> {
   try {
@@ -116,4 +120,49 @@ export async function publishCarouselToInstagram(input: CarouselPublishInput): P
       error: error instanceof Error ? error.message : "Unknown Instagram carousel publish error",
     };
   }
+}
+
+/** Step 1 of Instagram Login token exchange: authorization code -> short-lived token. */
+export async function exchangeInstagramCode(args: {
+  code: string;
+  appId: string;
+  appSecret: string;
+  redirectUri: string;
+}): Promise<{ accessToken: string; userId: string }> {
+  const body = new URLSearchParams({
+    client_id: args.appId,
+    client_secret: args.appSecret,
+    grant_type: "authorization_code",
+    redirect_uri: args.redirectUri,
+    code: args.code,
+  });
+  const res = await fetch("https://api.instagram.com/oauth/access_token", { method: "POST", body });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error_message || "Instagram token exchange failed");
+  return { accessToken: data.access_token, userId: String(data.user_id) };
+}
+
+/** Step 2: exchange the short-lived token for a long-lived one (~60 days, refreshable). */
+export async function exchangeForLongLivedInstagramToken(args: {
+  shortLivedToken: string;
+  appSecret: string;
+}): Promise<{ accessToken: string; expiresIn: number }> {
+  const params = new URLSearchParams({
+    grant_type: "ig_exchange_token",
+    client_secret: args.appSecret,
+    access_token: args.shortLivedToken,
+  });
+  const res = await fetch(`https://graph.instagram.com/access_token?${params}`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || "Instagram long-lived token exchange failed");
+  return { accessToken: data.access_token, expiresIn: data.expires_in };
+}
+
+export async function getInstagramProfile(accessToken: string): Promise<{ id: string; username: string }> {
+  const res = await fetch(
+    `https://graph.instagram.com/${GRAPH_VERSION}/me?fields=id,username&access_token=${accessToken}`
+  );
+  const data = await res.json();
+  if (!res.ok) throw new Error(data?.error?.message || "Fetching Instagram profile failed");
+  return { id: data.id, username: data.username };
 }

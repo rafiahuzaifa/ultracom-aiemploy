@@ -87,6 +87,11 @@ model IntegrationSettings {
   firecrawlApiKey      String?  @db.Text
   metaAppId            String?
   metaAppSecret        String?  @db.Text
+  // "Instagram API with Instagram Login" — Meta's current Instagram
+  // integration path, with its own app credentials separate from the
+  // Facebook App ID/Secret above (which are only used for Facebook Pages).
+  instagramAppId       String?
+  instagramAppSecret   String?  @db.Text
   linkedinClientId     String?
   linkedinClientSecret String?  @db.Text
   createdAt            DateTime @default(now())

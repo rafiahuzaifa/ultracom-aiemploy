@@ -16,7 +16,7 @@ interface Account {
 
 const PLATFORM_META = {
   FACEBOOK: { label: "Facebook Page", icon: Facebook, connectPath: "/api/social/connect/meta" },
-  INSTAGRAM: { label: "Instagram Business", icon: Instagram, connectPath: "/api/social/connect/meta" },
+  INSTAGRAM: { label: "Instagram", icon: Instagram, connectPath: "/api/social/connect/instagram" },
   LINKEDIN: { label: "LinkedIn Company Page", icon: Linkedin, connectPath: "/api/social/connect/linkedin" },
 } as const;
 
@@ -76,9 +76,7 @@ export function SocialConnectGrid({ brandId }: { brandId: string }) {
                 </div>
               ))}
               <Button variant="outline" className="w-full" asChild>
-                <a href={`${meta.connectPath}?brandId=${brandId}`}>
-                  Connect {platform === "INSTAGRAM" ? "via Facebook" : ""}
-                </a>
+                <a href={`${meta.connectPath}?brandId=${brandId}`}>Connect</a>
               </Button>
             </CardContent>
           </Card>

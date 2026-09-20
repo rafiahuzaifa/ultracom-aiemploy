@@ -12,6 +12,8 @@ export interface ResolvedIntegrationSettings {
   firecrawlApiKey?: string;
   metaAppId?: string;
   metaAppSecret?: string;
+  instagramAppId?: string;
+  instagramAppSecret?: string;
   linkedinClientId?: string;
   linkedinClientSecret?: string;
 }
@@ -48,6 +50,8 @@ export async function getIntegrationSettings(userId: string): Promise<ResolvedIn
     firecrawlApiKey: tryDecrypt(row?.firecrawlApiKey) || process.env.FIRECRAWL_API_KEY,
     metaAppId: row?.metaAppId || process.env.META_APP_ID,
     metaAppSecret: tryDecrypt(row?.metaAppSecret) || process.env.META_APP_SECRET,
+    instagramAppId: row?.instagramAppId || process.env.INSTAGRAM_APP_ID,
+    instagramAppSecret: tryDecrypt(row?.instagramAppSecret) || process.env.INSTAGRAM_APP_SECRET,
     linkedinClientId: row?.linkedinClientId || process.env.LINKEDIN_CLIENT_ID,
     linkedinClientSecret: tryDecrypt(row?.linkedinClientSecret) || process.env.LINKEDIN_CLIENT_SECRET,
   };
@@ -63,11 +67,13 @@ export async function getIntegrationStatus(userId: string) {
     geminiImageModel: settings.geminiImageModel,
     openaiTextModel: settings.openaiTextModel,
     metaAppId: settings.metaAppId ?? "",
+    instagramAppId: settings.instagramAppId ?? "",
     linkedinClientId: settings.linkedinClientId ?? "",
     hasGeminiApiKey: Boolean(settings.geminiApiKey),
     hasOpenaiApiKey: Boolean(settings.openaiApiKey),
     hasFirecrawlApiKey: Boolean(settings.firecrawlApiKey),
     hasMetaAppSecret: Boolean(settings.metaAppSecret),
+    hasInstagramAppSecret: Boolean(settings.instagramAppSecret),
     hasLinkedinClientSecret: Boolean(settings.linkedinClientSecret),
   };
 }
@@ -77,6 +83,7 @@ const SECRET_FIELDS = [
   "openaiApiKey",
   "firecrawlApiKey",
   "metaAppSecret",
+  "instagramAppSecret",
   "linkedinClientSecret",
 ] as const;
 
@@ -87,6 +94,7 @@ const PLAIN_FIELDS = [
   "geminiImageModel",
   "openaiTextModel",
   "metaAppId",
+  "instagramAppId",
   "linkedinClientId",
 ] as const;
 

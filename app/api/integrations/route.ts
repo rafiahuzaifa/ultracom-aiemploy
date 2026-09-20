@@ -14,6 +14,8 @@ const updateSchema = z.object({
   firecrawlApiKey: z.string().optional(),
   metaAppId: z.string().optional(),
   metaAppSecret: z.string().optional(),
+  instagramAppId: z.string().optional(),
+  instagramAppSecret: z.string().optional(),
   linkedinClientId: z.string().optional(),
   linkedinClientSecret: z.string().optional(),
 });

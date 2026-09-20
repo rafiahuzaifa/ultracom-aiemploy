@@ -64,28 +64,10 @@ export async function GET(request: Request) {
           accessToken: encrypt(page.access_token),
         },
       });
-
-      if (page.instagram_business_account?.id) {
-        await prisma.socialAccount.upsert({
-          where: {
-            brandId_platform_accountId: {
-              brandId,
-              platform: "INSTAGRAM",
-              accountId: page.instagram_business_account.id,
-            },
-          },
-          update: { accessToken: encrypt(page.access_token), accountName: page.name, isActive: true },
-          create: {
-            brandId,
-            platform: "INSTAGRAM",
-            accountId: page.instagram_business_account.id,
-            accountName: page.name,
-            accessToken: encrypt(page.access_token),
-            metadata: { linkedFacebookPageId: page.id },
-          },
-        });
-      }
     }
+    // Instagram is connected separately via /api/social/connect/instagram
+    // ("Instagram API with Instagram Login"), which has its own app
+    // credentials — this route only ever creates Facebook Page accounts.
 
     const response = NextResponse.redirect(
       new URL(`/brands?brandId=${brandId}&connected=meta`, appUrl)

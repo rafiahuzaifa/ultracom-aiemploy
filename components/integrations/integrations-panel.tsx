@@ -24,11 +24,13 @@ interface IntegrationStatus {
   geminiImageModel: string;
   openaiTextModel: string;
   metaAppId: string;
+  instagramAppId: string;
   linkedinClientId: string;
   hasGeminiApiKey: boolean;
   hasOpenaiApiKey: boolean;
   hasFirecrawlApiKey: boolean;
   hasMetaAppSecret: boolean;
+  hasInstagramAppSecret: boolean;
   hasLinkedinClientSecret: boolean;
 }
 
@@ -43,6 +45,7 @@ export function IntegrationsPanel() {
   const [geminiImageModel, setGeminiImageModel] = useState("");
   const [openaiTextModel, setOpenaiTextModel] = useState("");
   const [metaAppId, setMetaAppId] = useState("");
+  const [instagramAppId, setInstagramAppId] = useState("");
   const [linkedinClientId, setLinkedinClientId] = useState("");
 
   // Secret fields — always start blank; only sent to the server if the
@@ -51,6 +54,7 @@ export function IntegrationsPanel() {
   const [openaiApiKey, setOpenaiApiKey] = useState("");
   const [firecrawlApiKey, setFirecrawlApiKey] = useState("");
   const [metaAppSecret, setMetaAppSecret] = useState("");
+  const [instagramAppSecret, setInstagramAppSecret] = useState("");
   const [linkedinClientSecret, setLinkedinClientSecret] = useState("");
 
   useEffect(() => {
@@ -64,6 +68,7 @@ export function IntegrationsPanel() {
         setGeminiImageModel(d.status.geminiImageModel);
         setOpenaiTextModel(d.status.openaiTextModel);
         setMetaAppId(d.status.metaAppId);
+        setInstagramAppId(d.status.instagramAppId);
         setLinkedinClientId(d.status.linkedinClientId);
       });
   }, []);
@@ -78,12 +83,14 @@ export function IntegrationsPanel() {
         geminiImageModel,
         openaiTextModel,
         metaAppId,
+        instagramAppId,
         linkedinClientId,
       };
       if (geminiApiKey) payload.geminiApiKey = geminiApiKey;
       if (openaiApiKey) payload.openaiApiKey = openaiApiKey;
       if (firecrawlApiKey) payload.firecrawlApiKey = firecrawlApiKey;
       if (metaAppSecret) payload.metaAppSecret = metaAppSecret;
+      if (instagramAppSecret) payload.instagramAppSecret = instagramAppSecret;
       if (linkedinClientSecret) payload.linkedinClientSecret = linkedinClientSecret;
 
       const res = await fetch("/api/integrations", {
@@ -98,6 +105,7 @@ export function IntegrationsPanel() {
       setOpenaiApiKey("");
       setFirecrawlApiKey("");
       setMetaAppSecret("");
+      setInstagramAppSecret("");
       setLinkedinClientSecret("");
       toast.success("Integrations saved.");
     } catch {
@@ -200,9 +208,10 @@ export function IntegrationsPanel() {
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Meta (Facebook &amp; Instagram)</CardTitle>
+          <CardTitle className="text-base">Meta (Facebook Pages)</CardTitle>
           <CardDescription>
-            From developers.facebook.com/apps — one app covers every brand you connect.
+            From developers.facebook.com/apps — the main app credentials, used only for connecting
+            Facebook Pages. One app covers every brand you connect.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -215,6 +224,28 @@ export function IntegrationsPanel() {
             isSet={status.hasMetaAppSecret}
             value={metaAppSecret}
             onChange={setMetaAppSecret}
+          />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">Instagram</CardTitle>
+          <CardDescription>
+            From the same Meta app, under &quot;Instagram API with Instagram Login&quot; — this
+            product has its own separate App ID/Secret, different from the Facebook one above.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Instagram App ID</Label>
+            <Input value={instagramAppId} onChange={(e) => setInstagramAppId(e.target.value)} placeholder="Not set" />
+          </div>
+          <SecretField
+            label="Instagram App Secret"
+            isSet={status.hasInstagramAppSecret}
+            value={instagramAppSecret}
+            onChange={setInstagramAppSecret}
           />
         </CardContent>
       </Card>
