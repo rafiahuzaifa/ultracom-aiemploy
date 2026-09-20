@@ -17,6 +17,22 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
+
+  // Instagram redirects with these instead of `code` when authorization
+  // itself failed or was denied — surface that directly rather than
+  // masking it as a generic state-validation failure.
+  const igError = searchParams.get("error");
+  const igErrorReason = searchParams.get("error_reason");
+  const igErrorDescription = searchParams.get("error_description");
+  if (igError) {
+    return NextResponse.redirect(
+      new URL(
+        `/accounts?error=${encodeURIComponent(`ig_${igError}: ${igErrorReason ?? ""} ${igErrorDescription ?? ""}`)}`,
+        appUrl
+      )
+    );
+  }
+
   const code = searchParams.get("code");
   const state = searchParams.get("state");
   const cookieValue = request.headers
@@ -26,8 +42,23 @@ export async function GET(request: Request) {
     ?.split("=")[1];
   const [cookieNonce, brandId] = cookieValue?.split(":") ?? [];
 
-  if (!code || !state || !brandId || state !== cookieNonce) {
-    return NextResponse.redirect(new URL("/accounts?error=instagram_oauth_state", appUrl));
+  // Broken out into specific reasons (temporarily) since the generic
+  // combined check gave no way to tell which condition was actually
+  // failing during rollout.
+  if (!code) {
+    return NextResponse.redirect(new URL("/accounts?error=ig_missing_code", appUrl));
+  }
+  if (!state) {
+    return NextResponse.redirect(new URL("/accounts?error=ig_missing_state_param", appUrl));
+  }
+  if (!cookieValue) {
+    return NextResponse.redirect(new URL("/accounts?error=ig_missing_cookie", appUrl));
+  }
+  if (!brandId) {
+    return NextResponse.redirect(new URL("/accounts?error=ig_missing_brandid_in_cookie", appUrl));
+  }
+  if (state !== cookieNonce) {
+    return NextResponse.redirect(new URL("/accounts?error=ig_state_mismatch", appUrl));
   }
 
   const brand = await prisma.brand.findFirst({ where: { id: brandId, userId: session.user.id } });
