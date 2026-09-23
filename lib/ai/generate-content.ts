@@ -21,6 +21,53 @@ const CAPTIONS_SCHEMA = {
   required: ["facebook", "instagram", "linkedin"],
 };
 
+const ICON_ENUM = [
+  "globe",
+  "settings",
+  "cloud",
+  "users",
+  "shield",
+  "trending-up",
+  "bar-chart",
+  "check",
+  "wifi",
+  "headset",
+  "zap",
+  "lock",
+];
+
+const BULLET_SCHEMA = {
+  type: "object",
+  properties: {
+    icon: { type: "string", enum: ICON_ENUM },
+    title: { type: "string" },
+    subtitle: { type: "string" },
+  },
+  required: ["icon", "title", "subtitle"],
+};
+
+const SERVICE_SCHEMA = {
+  type: "object",
+  properties: {
+    icon: { type: "string", enum: ICON_ENUM },
+    label: { type: "string" },
+    subtitle: { type: "string" },
+  },
+  required: ["icon", "label", "subtitle"],
+};
+
+const AD_CREATIVE_SCHEMA = {
+  type: "object",
+  properties: {
+    headlineLines: { type: "array", items: { type: "string" } },
+    headlineEmphasisLines: { type: "integer" },
+    subheadline: { type: "string" },
+    bullets: { type: "array", items: BULLET_SCHEMA },
+    services: { type: "array", items: SERVICE_SCHEMA },
+  },
+  required: ["headlineLines", "headlineEmphasisLines", "subheadline", "bullets", "services"],
+};
+
 const SLIDE_SCHEMA = {
   type: "object",
   properties: {
@@ -58,6 +105,7 @@ const POST_SCHEMA = {
     hashtags: { type: "array", items: { type: "string" } },
     captions: CAPTIONS_SCHEMA,
     imagePrompt: { type: "string" },
+    adCreative: AD_CREATIVE_SCHEMA,
     slides: { type: "array", items: SLIDE_SCHEMA },
     reelScript: REEL_SCRIPT_SCHEMA,
   },
@@ -105,6 +153,14 @@ export async function generateAdPost(args: {
 
   if (args.postType !== "REEL") {
     delete draft.reelScript;
+  }
+
+  if (args.postType === "IMAGE" && draft.adCreative) {
+    draft.adCreative.bullets = draft.adCreative.bullets.slice(0, 3);
+    draft.adCreative.services = draft.adCreative.services.slice(0, 5);
+    draft.adCreative.headlineLines = draft.adCreative.headlineLines.slice(0, 4);
+  } else {
+    delete draft.adCreative;
   }
 
   return draft;

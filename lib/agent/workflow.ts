@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { runMarketResearch } from "@/lib/ai/research";
 import { generateAdPost } from "@/lib/ai/generate-content";
-import { generateAdImage } from "@/lib/ai/generate-image";
+import { generateAdImage, generateBrandedAdImage } from "@/lib/ai/generate-image";
 import type { BrandContext, ContentPostType, GeneratedPostDraft } from "@/lib/ai/types";
 import { getIntegrationSettings, type ResolvedIntegrationSettings } from "@/lib/integrations";
 
@@ -16,6 +16,8 @@ export async function buildBrandContext(brandId: string) {
   const analysis = (brand.analysis ?? {}) as Record<string, unknown>;
 
   const context: BrandContext = {
+    name: brand.name,
+    logoUrl: brand.logoUrl ?? undefined,
     websiteUrl: brand.websiteUrl,
     niche: brand.niche ?? (analysis.niche as string | undefined),
     products: (brand.products as string[] | null) ?? undefined,
@@ -56,13 +58,21 @@ export async function runContentPhase(args: {
 }
 
 /** Generates the image(s) a draft needs: one cover for IMAGE/REEL, one per slide for CAROUSEL. */
-export async function runImagePhase(draft: GeneratedPostDraft, settings: ResolvedIntegrationSettings) {
+export async function runImagePhase(
+  draft: GeneratedPostDraft,
+  settings: ResolvedIntegrationSettings,
+  brand: BrandContext
+) {
   if (draft.postType === "CAROUSEL" && draft.slides) {
     const slideImages = await Promise.all(
       draft.slides.map((slide) => generateAdImage(slide.imagePrompt, settings))
     );
     const coverImageUrl = slideImages[0];
     return { coverImageUrl, slideImages };
+  }
+  if (draft.postType === "IMAGE" && draft.adCreative) {
+    const coverImageUrl = await generateBrandedAdImage(draft.adCreative, brand);
+    return { coverImageUrl, slideImages: [] as string[] };
   }
   const coverImageUrl = await generateAdImage(draft.imagePrompt, settings);
   return { coverImageUrl, slideImages: [] as string[] };

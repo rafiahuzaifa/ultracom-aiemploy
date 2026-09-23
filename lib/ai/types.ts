@@ -31,7 +31,47 @@ export interface CarouselSlideDraft {
   caption: Localized;
 }
 
+/** Fixed icon vocabulary the branded ad template can render (kept in sync with lib/ads/icons.tsx). */
+export type AdIconKey =
+  | "globe"
+  | "settings"
+  | "cloud"
+  | "users"
+  | "shield"
+  | "trending-up"
+  | "bar-chart"
+  | "check"
+  | "wifi"
+  | "headset"
+  | "zap"
+  | "lock";
+
+export interface AdCreativeBullet {
+  icon: AdIconKey;
+  title: string;
+  subtitle: string;
+}
+
+export interface AdCreativeService {
+  icon: AdIconKey;
+  label: string;
+  subtitle: string;
+}
+
+/** Structured content for the branded template renderer (lib/ads/template.tsx) — used instead of a photo-style imagePrompt for IMAGE posts. */
+export interface AdCreative {
+  /** 2-4 short lines that stack into the big headline. */
+  headlineLines: string[];
+  /** How many trailing headlineLines are rendered in the accent color, e.g. 2. */
+  headlineEmphasisLines: number;
+  subheadline: string;
+  bullets: AdCreativeBullet[];
+  services: AdCreativeService[];
+}
+
 export interface BrandContext {
+  name?: string;
+  logoUrl?: string;
   websiteUrl?: string;
   niche?: string;
   products?: string[];
@@ -58,8 +98,10 @@ export interface GeneratedPostDraft {
   theme: string;
   hashtags: string[];
   captions: CaptionSet;
-  /** IMAGE: the single creative. CAROUSEL/REEL: cover/thumbnail image prompt. */
+  /** IMAGE: the single creative. CAROUSEL/REEL: cover/thumbnail image prompt. Unused when adCreative is set. */
   imagePrompt: string;
+  /** IMAGE only — structured content for the branded template renderer. */
+  adCreative?: AdCreative;
   /** CAROUSEL only. */
   slides?: CarouselSlideDraft[];
   /** REEL only. */

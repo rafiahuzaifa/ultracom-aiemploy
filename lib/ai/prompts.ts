@@ -44,7 +44,13 @@ function contentTypeInstruction(postType: ContentPostType) {
       return `This post is an INSTAGRAM REEL concept (no video is rendered — you are writing the creative brief). Populate "reelScript" with: "hook" (the first 1-2 seconds of spoken/on-screen text that stops the scroll), "fullScript" (the complete spoken script/voiceover), and "scenes" (4-8 scene objects, each with "description" of what happens, "visual" describing the shot/on-screen action, and "durationSeconds"). Also fill top-level "imagePrompt" for a cover/thumbnail image and "captions" for the post's caption and CTA.`;
     case "IMAGE":
     default:
-      return `This post is a SINGLE IMAGE post. Fill "imagePrompt" with one vivid, detailed prompt for the creative and "captions" with the post caption.`;
+      return `This post is a SINGLE IMAGE post rendered as a branded marketing graphic (not an AI photo) — fill "imagePrompt" with a one-line internal description (not used for rendering) and, most importantly, fill "adCreative" with the actual on-image content:
+- "headlineLines": 2-4 short punchy lines (a few words each) that together form one big headline, e.g. ["From Website to", "Business", "Management"].
+- "headlineEmphasisLines": how many of the LAST lines in headlineLines should be rendered in the brand accent color (usually 1-2).
+- "subheadline": one supporting sentence under the headline.
+- "bullets": exactly 3 short value-prop items, each with an "icon" (from the allowed list), a 2-4 word "title", and a short "subtitle".
+- "services": 3-5 items (icon + short "label" + short "subtitle") summarizing the brand's core offerings, e.g. one per major product/service line.
+Also still fill "captions" with the post caption for each platform. Never invent specific numbers/stats here beyond what's in the brand's stated unique selling points.`;
   }
 }
 
@@ -95,6 +101,8 @@ Market research:
 ${languageInstruction(brand.languagePreference)}
 
 ${contentTypeInstruction(postType)}
+
+${postType === "IMAGE" ? `Allowed "icon" values for adCreative bullets/services (pick the closest match, never invent new ones): globe, settings, cloud, users, shield, trending-up, bar-chart, check, wifi, headset, zap, lock.` : ""}
 
 ${theme ? `Build this post around the following content angle: ${theme}` : "Pick the strongest content angle from the research above."}
 

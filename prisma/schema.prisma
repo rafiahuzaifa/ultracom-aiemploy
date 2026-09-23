@@ -124,6 +124,7 @@ model Brand {
   userId     String
   name       String
   websiteUrl String
+  logoUrl    String?
   niche      String?
   products   Json?
   analysis   Json?

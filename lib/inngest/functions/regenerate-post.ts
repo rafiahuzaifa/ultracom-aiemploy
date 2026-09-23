@@ -27,7 +27,9 @@ export const regeneratePost = inngest.createFunction(
       })
     );
 
-    const { coverImageUrl, slideImages } = await step.run("generate-image", () => runImagePhase(draft, integrations));
+    const { coverImageUrl, slideImages } = await step.run("generate-image", () =>
+      runImagePhase(draft, integrations, context)
+    );
 
     const updated = await step.run("update-post", async () => {
       await prisma.postMedia.deleteMany({ where: { postId } });

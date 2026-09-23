@@ -10,7 +10,15 @@ export const pollinationsImageProvider: ImageProvider = {
   name: "pollinations",
   async generateImage(prompt: string) {
     const seed = Math.floor(Math.random() * 1_000_000);
-    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1024&height=1024&nologo=true&seed=${seed}`;
+    const params = new URLSearchParams({
+      width: "1024",
+      height: "1024",
+      nologo: "true",
+      seed: String(seed),
+      model: "flux", // sharper, more coherent than the default "turbo" model
+      enhance: "true", // lets Pollinations auto-expand the prompt for better detail/composition
+    });
+    const url = `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?${params}`;
 
     const res = await fetch(url);
     if (!res.ok) {

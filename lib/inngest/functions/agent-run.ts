@@ -46,7 +46,7 @@ export const agentRun = inngest.createFunction(
         );
 
         const { coverImageUrl, slideImages } = await step.run(`generate-image-${index}`, () =>
-          runImagePhase(draft, integrations)
+          runImagePhase(draft, integrations, context)
         );
 
         const post = await step.run(`persist-post-${index}`, () =>
