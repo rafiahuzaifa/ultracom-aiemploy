@@ -116,6 +116,10 @@ export function PostCard({
   const isPending = post.status === "PENDING_APPROVAL";
   const slides = post.media ?? [];
   const reelScript = post.reelScript as unknown as ReelScript | null;
+  const publishResults = post.publishResults as unknown as
+    | { platform: string; success: boolean; error?: string }[]
+    | null;
+  const hasFailedPlatform = publishResults?.some((r) => !r.success) ?? false;
 
   return (
     <Card>
@@ -220,7 +224,31 @@ export function PostCard({
             )}
           </div>
         )}
+
+        {publishResults && publishResults.length > 0 && (
+          <div className="space-y-1.5 rounded-lg border border-line/60 p-3">
+            <p className="text-xs font-semibold text-muted-foreground">Publish results</p>
+            {publishResults.map((r) => (
+              <div key={r.platform} className="flex items-start gap-2 text-xs">
+                <Badge variant={r.success ? "success" : "destructive"} className="shrink-0">
+                  {r.platform}
+                </Badge>
+                <span className={r.success ? "text-muted-foreground" : "text-destructive"}>
+                  {r.success ? "Published" : r.error}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
+      {hasFailedPlatform && !isPending && post.status !== "REGENERATING" && post.status !== "PUBLISHING" && (
+        <CardFooter>
+          <Button size="sm" onClick={() => patch("retry-publish")} disabled={!!busy}>
+            {busy === "retry-publish" ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            Retry failed platform{publishResults!.filter((r) => !r.success).length > 1 ? "s" : ""}
+          </Button>
+        </CardFooter>
+      )}
       {isPending && (
         <CardFooter className="flex-wrap gap-2">
           <Button size="sm" onClick={() => patch("approve")} disabled={!!busy}>

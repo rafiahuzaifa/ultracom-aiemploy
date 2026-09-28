@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import type { AgentRun, GeneratedPost } from "@prisma/client";
+import { useCallback, useEffect, useState } from "react";
+import type { AgentRun, GeneratedPost, PostMedia } from "@prisma/client";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -15,6 +15,7 @@ import {
 import { formatRelativeTime } from "@/lib/utils";
 import { useBrand } from "@/components/providers/brand-provider";
 import { BackLink } from "@/components/shell/back-link";
+import { PostCard } from "@/components/dashboard/post-card";
 
 const RUN_STATUS_VARIANT: Record<string, "success" | "destructive" | "secondary"> = {
   COMPLETED: "success",
@@ -22,18 +23,8 @@ const RUN_STATUS_VARIANT: Record<string, "success" | "destructive" | "secondary"
   RUNNING: "secondary",
 };
 
-const POST_STATUS_VARIANT: Record<string, "success" | "destructive" | "secondary" | "warning"> = {
-  PUBLISHED: "success",
-  FAILED: "destructive",
-  REJECTED: "destructive",
-  APPROVED: "secondary",
-  PUBLISHING: "secondary",
-  PENDING_APPROVAL: "warning",
-  REGENERATING: "secondary",
-};
-
 type RunWithBrand = AgentRun & { brand?: { name: string } };
-type PostWithBrand = GeneratedPost & { brand?: { name: string } };
+type PostWithBrand = GeneratedPost & { media?: PostMedia[]; brand?: { id: string; name: string } };
 
 export function HistoryPanel() {
   const { brands, currentBrandId } = useBrand();
@@ -45,11 +36,16 @@ export function HistoryPanel() {
     if (currentBrandId) setFilterId(currentBrandId);
   }, [currentBrandId]);
 
+  const loadPosts = useCallback(() => {
+    const query = filterId === "all" ? "" : `?brandId=${filterId}`;
+    fetch(`/api/posts${query}`).then((r) => r.json()).then((d) => setPosts(d.posts ?? []));
+  }, [filterId]);
+
   useEffect(() => {
     const query = filterId === "all" ? "" : `?brandId=${filterId}`;
     fetch(`/api/agent/runs${query}`).then((r) => r.json()).then((d) => setRuns(d.runs ?? []));
-    fetch(`/api/posts${query}`).then((r) => r.json()).then((d) => setPosts(d.posts ?? []));
-  }, [filterId]);
+    loadPosts();
+  }, [filterId, loadPosts]);
 
   return (
     <div className="space-y-6">
@@ -82,25 +78,7 @@ export function HistoryPanel() {
 
         <TabsContent value="posts" className="space-y-3">
           {posts.map((post) => (
-            <Card key={post.id}>
-              <CardHeader className="flex-row items-center justify-between space-y-0 py-3">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <CardTitle className="text-sm">{post.theme ?? "Untitled"}</CardTitle>
-                    {filterId === "all" && post.brand && (
-                      <Badge variant="outline">{post.brand.name}</Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">{formatRelativeTime(post.createdAt)}</p>
-                </div>
-                <Badge variant={POST_STATUS_VARIANT[post.status] ?? "outline"}>{post.status.replace("_", " ")}</Badge>
-              </CardHeader>
-              {post.publishResults != null && (
-                <CardContent className="pt-0 text-xs text-muted-foreground">
-                  {JSON.stringify(post.publishResults)}
-                </CardContent>
-              )}
-            </Card>
+            <PostCard key={post.id} post={post} brandName={post.brand?.name ?? "Brand"} onChanged={loadPosts} />
           ))}
           {posts.length === 0 && <p className="text-sm text-muted-foreground">No posts yet.</p>}
         </TabsContent>

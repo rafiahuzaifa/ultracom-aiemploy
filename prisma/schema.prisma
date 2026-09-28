@@ -214,6 +214,7 @@ model GeneratedPost {
   theme           String?
   imageUrl        String?
   imagePrompt     String?
+  adCreative      Json?
   captions        Json?
   reelScript      Json?
   researchSummary String?

@@ -97,6 +97,7 @@ export async function persistGeneratedPost(args: {
       postType: draft.postType,
       theme: draft.theme,
       imagePrompt: draft.imagePrompt,
+      adCreative: draft.adCreative ? (draft.adCreative as unknown as object) : undefined,
       imageUrl: coverImageUrl,
       researchSummary,
       platforms: ["FACEBOOK", "INSTAGRAM", "LINKEDIN"],

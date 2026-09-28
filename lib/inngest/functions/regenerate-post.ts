@@ -39,6 +39,7 @@ export const regeneratePost = inngest.createFunction(
           status: "PENDING_APPROVAL",
           theme: draft.theme,
           imagePrompt: draft.imagePrompt,
+          adCreative: draft.adCreative ? (draft.adCreative as unknown as object) : Prisma.JsonNull,
           imageUrl: coverImageUrl,
           researchSummary: research.summary,
           captions: draft.captions as unknown as object,

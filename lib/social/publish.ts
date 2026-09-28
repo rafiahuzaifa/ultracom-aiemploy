@@ -34,13 +34,15 @@ const CAROUSEL_PUBLISHERS: Record<
 export async function publishPostToPlatforms(args: {
   post: GeneratedPost & { media?: PostMedia[] };
   accounts: SocialAccount[];
+  /** Restricts the attempt to a subset of post.platforms — used on retry so already-succeeded platforms are never re-posted (which would duplicate them). Defaults to every platform on the post. */
+  onlyPlatforms?: Platform[];
 }): Promise<PublishResult[]> {
-  const { post, accounts } = args;
+  const { post, accounts, onlyPlatforms } = args;
   if (!post.imageUrl) {
     throw new Error("Post has no image to publish.");
   }
 
-  const platforms = post.platforms as Platform[];
+  const platforms = onlyPlatforms ?? (post.platforms as Platform[]);
   const captions = (post.captions ?? {}) as unknown as CaptionSet;
   const isCarousel = post.postType === "CAROUSEL" && (post.media?.length ?? 0) > 0;
   const results: PublishResult[] = [];

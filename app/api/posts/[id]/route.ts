@@ -3,8 +3,9 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { inngest } from "@/lib/inngest/client";
 import { isErrorResponse, requireUserId } from "@/lib/api-helpers";
-import { generateAdImage } from "@/lib/ai/generate-image";
+import { generateAdImage, generateBrandedAdImage } from "@/lib/ai/generate-image";
 import { getIntegrationSettings } from "@/lib/integrations";
+import type { AdCreative } from "@/lib/ai/types";
 
 const localizedSchema = z.object({
   en: z.string().optional(),
@@ -12,7 +13,7 @@ const localizedSchema = z.object({
 });
 
 const patchSchema = z.object({
-  action: z.enum(["approve", "reject", "regenerate", "regenerate-image", "edit"]),
+  action: z.enum(["approve", "reject", "regenerate", "regenerate-image", "edit", "retry-publish"]),
   rejectionReason: z.string().optional(),
   captions: z
     .object({
@@ -45,7 +46,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const post = await prisma.generatedPost.findFirst({
     where: { id, brand: { userId } },
-    include: { media: { orderBy: { order: "asc" } } },
+    include: { media: { orderBy: { order: "asc" } }, brand: true },
   });
   if (!post) return NextResponse.json({ error: "Post not found" }, { status: 404 });
 
@@ -76,6 +77,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       const updated = await prisma.generatedPost.update({
         where: { id },
         data: { status: "APPROVED", approvedAt: new Date() },
+      });
+      await inngest.send({ name: "post/approved", data: { postId: id } });
+      return NextResponse.json({ post: updated });
+    }
+    case "retry-publish": {
+      // Re-runs the exact same publish attempt (same images/captions already
+      // generated) — for a post stuck FAILED after a fixable problem like a
+      // missing social permission, once that's resolved on the platform side.
+      const updated = await prisma.generatedPost.update({
+        where: { id },
+        data: { status: "APPROVED" },
       });
       await inngest.send({ name: "post/approved", data: { postId: id } });
       return NextResponse.json({ post: updated });
@@ -117,7 +129,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         return NextResponse.json({ post: updated });
       }
 
-      const newImageUrl = await generateAdImage(post.imagePrompt ?? post.theme ?? "", settings);
+      const newImageUrl =
+        post.postType === "IMAGE" && post.adCreative
+          ? await generateBrandedAdImage(post.adCreative as unknown as AdCreative, {
+              name: post.brand.name,
+              logoUrl: post.brand.logoUrl ?? undefined,
+              websiteUrl: post.brand.websiteUrl,
+            })
+          : await generateAdImage(post.imagePrompt ?? post.theme ?? "", settings);
       const updated = await prisma.generatedPost.update({
         where: { id },
         data: { imageUrl: newImageUrl },
