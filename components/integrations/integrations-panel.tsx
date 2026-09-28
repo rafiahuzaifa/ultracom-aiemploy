@@ -27,12 +27,15 @@ interface IntegrationStatus {
   metaConfigId: string;
   instagramAppId: string;
   linkedinClientId: string;
+  whatsappPhoneNumberId: string;
+  whatsappRecipientNumber: string;
   hasGeminiApiKey: boolean;
   hasOpenaiApiKey: boolean;
   hasFirecrawlApiKey: boolean;
   hasMetaAppSecret: boolean;
   hasInstagramAppSecret: boolean;
   hasLinkedinClientSecret: boolean;
+  hasWhatsappAccessToken: boolean;
 }
 
 export function IntegrationsPanel() {
@@ -49,6 +52,8 @@ export function IntegrationsPanel() {
   const [metaConfigId, setMetaConfigId] = useState("");
   const [instagramAppId, setInstagramAppId] = useState("");
   const [linkedinClientId, setLinkedinClientId] = useState("");
+  const [whatsappPhoneNumberId, setWhatsappPhoneNumberId] = useState("");
+  const [whatsappRecipientNumber, setWhatsappRecipientNumber] = useState("");
 
   // Secret fields — always start blank; only sent to the server if the
   // user actually types something new.
@@ -58,6 +63,7 @@ export function IntegrationsPanel() {
   const [metaAppSecret, setMetaAppSecret] = useState("");
   const [instagramAppSecret, setInstagramAppSecret] = useState("");
   const [linkedinClientSecret, setLinkedinClientSecret] = useState("");
+  const [whatsappAccessToken, setWhatsappAccessToken] = useState("");
 
   useEffect(() => {
     fetch("/api/integrations")
@@ -73,6 +79,8 @@ export function IntegrationsPanel() {
         setMetaConfigId(d.status.metaConfigId);
         setInstagramAppId(d.status.instagramAppId);
         setLinkedinClientId(d.status.linkedinClientId);
+        setWhatsappPhoneNumberId(d.status.whatsappPhoneNumberId);
+        setWhatsappRecipientNumber(d.status.whatsappRecipientNumber);
       });
   }, []);
 
@@ -89,6 +97,8 @@ export function IntegrationsPanel() {
         metaConfigId,
         instagramAppId,
         linkedinClientId,
+        whatsappPhoneNumberId,
+        whatsappRecipientNumber,
       };
       if (geminiApiKey) payload.geminiApiKey = geminiApiKey;
       if (openaiApiKey) payload.openaiApiKey = openaiApiKey;
@@ -96,6 +106,7 @@ export function IntegrationsPanel() {
       if (metaAppSecret) payload.metaAppSecret = metaAppSecret;
       if (instagramAppSecret) payload.instagramAppSecret = instagramAppSecret;
       if (linkedinClientSecret) payload.linkedinClientSecret = linkedinClientSecret;
+      if (whatsappAccessToken) payload.whatsappAccessToken = whatsappAccessToken;
 
       const res = await fetch("/api/integrations", {
         method: "PATCH",
@@ -111,6 +122,7 @@ export function IntegrationsPanel() {
       setMetaAppSecret("");
       setInstagramAppSecret("");
       setLinkedinClientSecret("");
+      setWhatsappAccessToken("");
       toast.success("Integrations saved.");
     } catch {
       toast.error("Couldn't save integrations.");
@@ -285,6 +297,40 @@ export function IntegrationsPanel() {
             value={linkedinClientSecret}
             onChange={setLinkedinClientSecret}
           />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">WhatsApp notifications</CardTitle>
+          <CardDescription>
+            Optional — sends a WhatsApp message to your own number whenever new posts are ready
+            for review, using the free WhatsApp Cloud API.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Phone Number ID</Label>
+            <Input
+              value={whatsappPhoneNumberId}
+              onChange={(e) => setWhatsappPhoneNumberId(e.target.value)}
+              placeholder="Not set"
+            />
+          </div>
+          <SecretField
+            label="Access Token"
+            isSet={status.hasWhatsappAccessToken}
+            value={whatsappAccessToken}
+            onChange={setWhatsappAccessToken}
+          />
+          <div>
+            <Label>Your WhatsApp number</Label>
+            <Input
+              value={whatsappRecipientNumber}
+              onChange={(e) => setWhatsappRecipientNumber(e.target.value)}
+              placeholder="e.g. 923001234567 (country code, no + or spaces)"
+            />
+          </div>
         </CardContent>
       </Card>
 

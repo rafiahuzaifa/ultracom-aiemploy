@@ -17,6 +17,9 @@ export interface ResolvedIntegrationSettings {
   instagramAppSecret?: string;
   linkedinClientId?: string;
   linkedinClientSecret?: string;
+  whatsappPhoneNumberId?: string;
+  whatsappAccessToken?: string;
+  whatsappRecipientNumber?: string;
 }
 
 function tryDecrypt(value: string | null | undefined): string | undefined {
@@ -56,6 +59,9 @@ export async function getIntegrationSettings(userId: string): Promise<ResolvedIn
     instagramAppSecret: tryDecrypt(row?.instagramAppSecret) || process.env.INSTAGRAM_APP_SECRET,
     linkedinClientId: row?.linkedinClientId || process.env.LINKEDIN_CLIENT_ID,
     linkedinClientSecret: tryDecrypt(row?.linkedinClientSecret) || process.env.LINKEDIN_CLIENT_SECRET,
+    whatsappPhoneNumberId: row?.whatsappPhoneNumberId || process.env.WHATSAPP_PHONE_NUMBER_ID,
+    whatsappAccessToken: tryDecrypt(row?.whatsappAccessToken) || process.env.WHATSAPP_ACCESS_TOKEN,
+    whatsappRecipientNumber: row?.whatsappRecipientNumber || process.env.WHATSAPP_RECIPIENT_NUMBER,
   };
 }
 
@@ -72,12 +78,15 @@ export async function getIntegrationStatus(userId: string) {
     metaConfigId: settings.metaConfigId ?? "",
     instagramAppId: settings.instagramAppId ?? "",
     linkedinClientId: settings.linkedinClientId ?? "",
+    whatsappPhoneNumberId: settings.whatsappPhoneNumberId ?? "",
+    whatsappRecipientNumber: settings.whatsappRecipientNumber ?? "",
     hasGeminiApiKey: Boolean(settings.geminiApiKey),
     hasOpenaiApiKey: Boolean(settings.openaiApiKey),
     hasFirecrawlApiKey: Boolean(settings.firecrawlApiKey),
     hasMetaAppSecret: Boolean(settings.metaAppSecret),
     hasInstagramAppSecret: Boolean(settings.instagramAppSecret),
     hasLinkedinClientSecret: Boolean(settings.linkedinClientSecret),
+    hasWhatsappAccessToken: Boolean(settings.whatsappAccessToken),
   };
 }
 
@@ -88,6 +97,7 @@ const SECRET_FIELDS = [
   "metaAppSecret",
   "instagramAppSecret",
   "linkedinClientSecret",
+  "whatsappAccessToken",
 ] as const;
 
 const PLAIN_FIELDS = [
@@ -100,6 +110,8 @@ const PLAIN_FIELDS = [
   "metaConfigId",
   "instagramAppId",
   "linkedinClientId",
+  "whatsappPhoneNumberId",
+  "whatsappRecipientNumber",
 ] as const;
 
 export type IntegrationUpdateInput = Partial<

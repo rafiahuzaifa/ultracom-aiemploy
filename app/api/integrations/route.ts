@@ -19,6 +19,9 @@ const updateSchema = z.object({
   instagramAppSecret: z.string().optional(),
   linkedinClientId: z.string().optional(),
   linkedinClientSecret: z.string().optional(),
+  whatsappPhoneNumberId: z.string().optional(),
+  whatsappAccessToken: z.string().optional(),
+  whatsappRecipientNumber: z.string().optional(),
 });
 
 export async function GET() {

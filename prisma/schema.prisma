@@ -97,6 +97,11 @@ model IntegrationSettings {
   instagramAppSecret   String?  @db.Text
   linkedinClientId     String?
   linkedinClientSecret String?  @db.Text
+  // WhatsApp Cloud API — sends a notification (not a two-way chat) to the
+  // account owner's own number whenever new posts are ready for review.
+  whatsappPhoneNumberId   String?
+  whatsappAccessToken     String?  @db.Text
+  whatsappRecipientNumber String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)

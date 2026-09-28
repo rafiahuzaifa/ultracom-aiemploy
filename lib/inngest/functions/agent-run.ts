@@ -1,6 +1,7 @@
 import { inngest } from "@/lib/inngest/client";
 import { prisma } from "@/lib/db";
 import { notifyUser } from "@/lib/notify";
+import { sendPostsReadyWhatsApp } from "@/lib/social/whatsapp";
 import {
   buildBrandContext,
   persistGeneratedPost,
@@ -93,6 +94,14 @@ export const agentRun = inngest.createFunction(
             title: `${createdPosts.length} new post${createdPosts.length > 1 ? "s" : ""} ready for review — ${brand.name}`,
             body: research.summary,
             href: "/",
+          })
+        );
+        await step.run("notify-whatsapp", () =>
+          sendPostsReadyWhatsApp({
+            settings: integrations,
+            brandName: brand.name,
+            postCount: createdPosts.length,
+            appUrl: process.env.NEXT_PUBLIC_APP_URL ?? "",
           })
         );
       }
