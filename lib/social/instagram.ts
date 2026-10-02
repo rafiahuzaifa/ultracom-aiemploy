@@ -16,6 +16,26 @@ function assertPublicUrl(imageUrl: string) {
 }
 
 /**
+ * Media containers are processed asynchronously — calling media_publish
+ * before status_code is FINISHED fails with "Media ID is not available".
+ */
+async function waitForContainer(containerId: string, accessToken: string) {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const res = await fetch(
+      `${GRAPH_BASE}/${containerId}?fields=status_code,status&access_token=${accessToken}`
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error?.message || `Instagram container status error (${res.status})`);
+    if (data.status_code === "FINISHED") return;
+    if (data.status_code === "ERROR" || data.status_code === "EXPIRED") {
+      throw new Error(`Instagram could not process the media (${data.status_code}: ${data.status ?? "no details"})`);
+    }
+    await new Promise((resolve) => setTimeout(resolve, 3000));
+  }
+  throw new Error("Instagram media is still processing after 60s — try publishing again.");
+}
+
+/**
  * Publishes an image post to an Instagram professional account via the
  * container -> publish flow.
  */
@@ -37,6 +57,7 @@ export async function publishToInstagram(input: PublishInput): Promise<PublishRe
       throw new Error(createData?.error?.message || `Instagram container error (${createRes.status})`);
     }
     const creationId = createData.id;
+    await waitForContainer(creationId, input.accessToken);
 
     const publishParams = new URLSearchParams({
       creation_id: creationId,
@@ -83,6 +104,7 @@ export async function publishCarouselToInstagram(input: CarouselPublishInput): P
         return data.id as string;
       })
     );
+    await Promise.all(childIds.map((id) => waitForContainer(id, input.accessToken)));
 
     const carouselParams = new URLSearchParams({
       media_type: "CAROUSEL",
@@ -98,6 +120,8 @@ export async function publishCarouselToInstagram(input: CarouselPublishInput): P
     if (!carouselRes.ok) {
       throw new Error(carouselData?.error?.message || `Instagram carousel container error (${carouselRes.status})`);
     }
+
+    await waitForContainer(carouselData.id, input.accessToken);
 
     const publishParams = new URLSearchParams({
       creation_id: carouselData.id,

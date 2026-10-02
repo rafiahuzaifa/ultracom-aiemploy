@@ -76,6 +76,26 @@ export async function GET(request: Request) {
     const tokenData = await tokenRes.json();
     if (!tokenRes.ok) throw new Error(tokenData?.error?.message || "Token exchange failed");
 
+    // Fail at connect time (instead of on every publish with a cryptic #200)
+    // when the Login for Business configuration didn't grant posting rights.
+    const permRes = await fetch(
+      `https://graph.facebook.com/${GRAPH_VERSION}/me/permissions?access_token=${tokenData.access_token}`
+    );
+    const permData = await permRes.json();
+    const granted = new Set(
+      ((permData?.data ?? []) as Array<{ permission: string; status: string }>)
+        .filter((p) => p.status === "granted")
+        .map((p) => p.permission)
+    );
+    const missing = ["pages_show_list", "pages_manage_posts", "pages_read_engagement"].filter(
+      (p) => !granted.has(p)
+    );
+    if (missing.length > 0) {
+      throw new Error(
+        `Facebook did not grant: ${missing.join(", ")}. Add them to your Facebook Login for Business configuration (and app use case), then reconnect.`
+      );
+    }
+
     const pages = await listFacebookPages(tokenData.access_token);
 
     for (const page of pages) {
